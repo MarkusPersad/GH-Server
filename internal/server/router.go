@@ -38,6 +38,10 @@ func (server *FiberServer) RegisterRoutes() {
 	server.App.Get("/metrics", monitor.New(monitor.Config{
 		Title: "GH-Server Monitor",
 	}))
+
+	userRoute := server.App.Group("/user")
+	userRoute.Post("/register", server.Handler.UserRegister)
+	userRoute.Post("/sendVerifyCode", server.Handler.SendVerifyMail)
 }
 
 func (server *FiberServer) healthHandler(ctx fiber.Ctx) error {

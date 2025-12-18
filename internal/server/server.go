@@ -2,10 +2,13 @@ package server
 
 import (
 	"GH-Server/internal/database"
+	"GH-Server/internal/handler"
 	"GH-Server/internal/middleware"
+	"GH-Server/pkg/utils"
 	"os"
 
 	"github.com/bytedance/sonic"
+	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v3"
 
 	_ "github.com/joho/godotenv/autoload"
@@ -13,7 +16,7 @@ import (
 
 type FiberServer struct {
 	*fiber.App
-	database.Service
+	*handler.Handler
 }
 
 func New() *FiberServer {
@@ -25,6 +28,11 @@ func New() *FiberServer {
 			JSONDecoder:  sonic.Unmarshal,
 			ErrorHandler: middleware.ErrorHandler,
 		}),
-		Service: database.New(),
+		Handler: &handler.Handler{
+			Service: database.New(),
+			StructValidator: &utils.StructValidator{
+				Validator: validator.New(),
+			},
+		},
 	}
 }

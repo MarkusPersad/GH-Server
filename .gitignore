@@ -1,0 +1,11 @@
+# Log files
+logs/
+*.log
+
+# Temp files
+tmp/
+
+
+# IDE files
+.idea/
+*.iml
