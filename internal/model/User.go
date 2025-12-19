@@ -25,6 +25,8 @@ type User struct {
 	Avatar string `gorm:"type:text" json:"avatar,omitempty"`
 	// 用户角色，默认为普通用户0
 	Role uint8 `gorm:"default:0" json:"role"`
+	
+	LastLoginAt time.Time `gorm:"type:timestamp with time zone;" json:"last_login_at"`
 
 	// GORM自动管理的时间字段
 	CreatedAt time.Time `gorm:"type:timestamp with time zone;not null" json:"created_at"`

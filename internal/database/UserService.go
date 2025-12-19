@@ -1,12 +1,15 @@
 package database
 
 import (
+	"GH-Server/internal/middleware"
 	"GH-Server/internal/model"
 	"GH-Server/pkg/exceptions"
 	"GH-Server/pkg/request"
+	"GH-Server/pkg/response"
 	"GH-Server/pkg/utils"
 	"GH-Server/pkg/zaplog"
 	"context"
+	"errors"
 	"fmt"
 	"math/rand"
 	"strconv"
@@ -23,6 +26,7 @@ var (
 type UserService interface {
 	Register(register *request.UserRegisterRequest, ctx context.Context) error
 	SendVerifyCode(emailVerify *request.UserMailVerifyRequest, ctx context.Context) error
+	Login(login *request.UserLoginRequest,ctx context.Context) (*response.UserInfoResponse,error)
 }
 
 // Register 创建新用户并将其信息存储到数据库中
@@ -36,6 +40,12 @@ type UserService interface {
 func (s *service) Register(register *request.UserRegisterRequest, ctx context.Context) error {
 	// 在数据库事务中执行用户注册逻辑
 	return s.db.Transaction(func(tx *gorm.DB) error {
+
+		//检测用户是否存在
+		if _, err := gorm.G[model.User](s.db).Where("email = ?", register.Email).Or("user_name = ?",register.UserName).First(ctx); err == nil {
+			return exceptions.ErrUserAlreadyExists
+		}
+
 		// 检查验证码
 		if verifyCode, err := s.rdb.Get(ctx, fmt.Sprintf("%s%s", verifyCodePrefix, register.Email)).Result(); err == nil {
 			if register.VerifyCode == verifyCode {
@@ -57,7 +67,6 @@ func (s *service) Register(register *request.UserRegisterRequest, ctx context.Co
 		if err != nil {
 			return err
 		}
-
 		// 将用户信息保存到数据库中
 		err = gorm.G[model.User](tx).Create(ctx, &model.User{
 			UUID:     userUuid,
@@ -84,4 +93,40 @@ func (s *service) SendVerifyCode(emailVerify *request.UserMailVerifyRequest, ctx
 		return err
 	}
 	return nil
+}
+
+func(s *service) Login(login *request.UserLoginRequest,ctx context.Context) (*response.UserInfoResponse,error) {
+	userInfo := new(response.UserInfoResponse)
+	err := s.db.Transaction(func(tx *gorm.DB) error {
+		user := new(model.User)
+		if userModel,err := gorm.G[model.User](tx).Where("email = ?",login.Email).First(ctx);err != nil {
+			zaplog.Zap.Error(fmt.Sprintf("Select model.User Failed:%v",err))
+			if errors.Is(err,gorm.ErrRecordNotFound){
+				return exceptions.ErrUserNotFound
+			}
+			return err
+		} else {
+			user = &userModel
+		}
+		if err := utils.ComparedWithPassword(user.Password,login.Password);err != nil {
+			zaplog.Zap.Error(fmt.Sprintf("Password Compare Failed:%v",err))
+			return err
+		}
+		if token,err := middleware.CreateJwtToken(user);err != nil {
+			return err
+		}else {
+			userInfo.Token = token
+		}
+		if _,err := gorm.G[model.User](tx).Where("email = ?",user.Email).Update(ctx,"last_login_at",time.Now());err != nil {
+			zaplog.Zap.Error(fmt.Sprintf("Update user failed: %v", err))
+			return err
+		}
+		userInfo.Avatar = user.Avatar
+		userInfo.Email = user.Email
+		userInfo.Role = user.Role
+		userInfo.UUID = user.UUID
+		userInfo.UserName = user.UserName		
+		return nil
+	})
+	return userInfo,err
 }

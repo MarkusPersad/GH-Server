@@ -46,6 +46,17 @@ func (handler *Handler) UserRegister(ctx fiber.Ctx) error {
 }
 
 func (handler *Handler) UserLogin(ctx fiber.Ctx) error {
-
-	return nil
+	login := new(request.UserLoginRequest)
+	if err := ctx.Bind().Body(login); err != nil {
+		zaplog.Zap.Error(fmt.Sprintf("bind body failed: %v", err))
+		return exceptions.ErrBadRequest
+	}
+	if err := handler.Validate(login); err != nil {
+		return exceptions.ErrInvalidParameters
+	}
+	if userInfo,err := handler.Login(login,ctx);err != nil {
+		return err
+	} else {
+		return ctx.Status(http.StatusOK).JSON(response.Success("登录成功",userInfo))
+	}
 }

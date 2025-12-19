@@ -1,3 +1,5 @@
+github.com/MicahParks/keyfunc/v2 v2.1.0 h1:6ZXKb9Rp6qp1bDbJefnG7cTH8yMN1IC/4nf+GVjO99k=
+github.com/MicahParks/keyfunc/v2 v2.1.0/go.mod h1:rW42fi+xgLJ2FRRXAfNx9ZA8WpD4OeE/yHVMteCkw9k=
 github.com/andybalholm/brotli v1.2.0 h1:ukwgCxwYrmACq68yiUqwIWnGY0cTPox/M94sVwToPjQ=
 github.com/andybalholm/brotli v1.2.0/go.mod h1:rzTDkvFWvIrjDXZHkuS16NPggd91W3kUSvPlQ1pLaKY=
 github.com/bsm/ginkgo/v2 v2.12.0 h1:Ny8MWAHyOepLGlLKYmXG4IEkioBysk6GpaRTLC8zwWs=
@@ -34,6 +36,8 @@ github.com/go-playground/universal-translator v0.18.1 h1:Bcnm0ZwsGyWbCzImXv+pAJn
 github.com/go-playground/universal-translator v0.18.1/go.mod h1:xekY+UJKNuX9WP91TpwSH2VMlDf28Uj24BCp08ZFTUY=
 github.com/go-playground/validator/v10 v10.28.0 h1:Q7ibns33JjyW48gHkuFT91qX48KG0ktULL6FgHdG688=
 github.com/go-playground/validator/v10 v10.28.0/go.mod h1:GoI6I1SjPBh9p7ykNE/yj3fFYbyDOpwMn5KXd+m2hUU=
+github.com/gofiber/contrib/v3/jwt v1.0.0-rc.1 h1:O1og5GyFmmbsi/VPjBT4A4A6OiEe2CT0WFGsiKXvTwI=
+github.com/gofiber/contrib/v3/jwt v1.0.0-rc.1/go.mod h1:/9zLCFyb78MfS+GLXPofhfbYz3OU22xGMEJy8tkRKn4=
 github.com/gofiber/contrib/v3/monitor v1.0.0-rc.1 h1:18ibx0C2SdVlB9yh8h+jTdQ8kJCTnEypZowfNJy18Ko=
 github.com/gofiber/contrib/v3/monitor v1.0.0-rc.1/go.mod h1:DAtC5TCeztPy1ZOIY0HYcmXdgIaIBm/AUvfpWdNBIE4=
 github.com/gofiber/contrib/v3/zap v1.0.0-rc.1 h1:OVl1XPGfgllxVAXaupLNDTWlq/rl7eFNDsdKDygCsQw=
@@ -44,6 +48,8 @@ github.com/gofiber/schema v1.6.0 h1:rAgVDFwhndtC+hgV7Vu5ItQCn7eC2mBA4Eu1/ZTiEYY=
 github.com/gofiber/schema v1.6.0/go.mod h1:WNZWpQx8LlPSK7ZaX0OqOh+nQo/eW2OevsXs1VZfs/s=
 github.com/gofiber/utils/v2 v2.0.0-rc.4 h1:CDjwPwtwwj1OTIf6v3iRk+D2wcdjUzwk91Ghu2TMNbE=
 github.com/gofiber/utils/v2 v2.0.0-rc.4/go.mod h1:gXins5o7up+BQFiubmO8aUJc/+Mhd7EKXIiAK5GBomI=
+github.com/golang-jwt/jwt/v5 v5.3.0 h1:pv4AsKCKKZuqlgs5sUmn4x8UlGa0kEVt/puTpKx9vvo=
+github.com/golang-jwt/jwt/v5 v5.3.0/go.mod h1:fxCRLWMO43lRc8nhHWY6LGqRcf+1gQWArsqaEUEa5bE=
 github.com/google/go-cmp v0.7.0 h1:wk8382ETsv4JYUZwIsn6YpYiWiBsYLSJiTsyBybVuN8=
 github.com/google/go-cmp v0.7.0/go.mod h1:pXiqmnSA92OHEEa9HXL2W4E7lf9JzCmGVUdgjX3N/iU=
 github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=

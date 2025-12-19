@@ -1,6 +1,7 @@
 package server
 
 import (
+	"GH-Server/internal/middleware"
 	"GH-Server/pkg/zaplog"
 
 	"github.com/gofiber/contrib/v3/monitor"
@@ -10,6 +11,8 @@ import (
 	"github.com/gofiber/fiber/v3/middleware/recover"
 	"go.uber.org/zap/zapcore"
 )
+
+
 
 func (server *FiberServer) RegisterRoutes() {
 
@@ -30,6 +33,9 @@ func (server *FiberServer) RegisterRoutes() {
 
 	// Recovery
 	server.App.Use(recover.New(recover.ConfigDefault))
+	
+	//JWT
+	server.App.Use(middleware.NewJwtMiddleWare())
 
 	// Database  health
 	server.App.Get("/health", server.healthHandler)
@@ -42,6 +48,7 @@ func (server *FiberServer) RegisterRoutes() {
 	userRoute := server.App.Group("/user")
 	userRoute.Post("/register", server.Handler.UserRegister)
 	userRoute.Post("/sendVerifyCode", server.Handler.SendVerifyMail)
+	userRoute.Post("/login",server.UserLogin)
 }
 
 func (server *FiberServer) healthHandler(ctx fiber.Ctx) error {
