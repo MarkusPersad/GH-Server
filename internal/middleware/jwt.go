@@ -39,7 +39,9 @@ func NewJwtMiddleWare() fiber.Handler{
 		Next: func(c fiber.Ctx) bool {
 			return strings.Contains(c.Request().URI().String(),"register")||
 				strings.Contains(c.Request().URI().String(),"login")||
-				strings.Contains(c.Request().URI().String(),"sendVerifyCode")
+				strings.Contains(c.Request().URI().String(),"sendVerifyCode") ||
+				strings.Contains(c.Request().URI().String(),"metrics")||
+				strings.Contains(c.Request().URI().String(),"health")
 		},
 	})
 }
