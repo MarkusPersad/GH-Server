@@ -17,6 +17,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 	"gorm.io/gorm/schema"
 )
 
@@ -63,6 +64,7 @@ func New() Service {
 		NamingStrategy: schema.NamingStrategy{
 			SingularTable: true,
 		},
+		Logger: logger.Default.LogMode(logger.Silent),
 	})
 	if Db, err := db.DB(); err != nil {
 		zaplog.Zap.Panic(fmt.Sprintf("failed to connect database: %v", err))
