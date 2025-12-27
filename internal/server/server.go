@@ -2,6 +2,7 @@ package server
 
 import (
 	"GH-Server/internal/database"
+	"GH-Server/internal/fileServer"
 	"GH-Server/internal/handler"
 	"GH-Server/internal/middleware"
 	"GH-Server/pkg/utils"
@@ -29,7 +30,8 @@ func New() *FiberServer {
 			ErrorHandler: middleware.ErrorHandler,
 		}),
 		Handler: &handler.Handler{
-			Service: database.New(),
+			Service:       database.New(),
+			RustFSService: fileServer.New(),
 			StructValidator: &utils.StructValidator{
 				Validator: validator.New(),
 			},
