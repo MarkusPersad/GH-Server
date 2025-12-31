@@ -12,15 +12,19 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"os"
 	"strconv"
 	"time"
 
+	_ "github.com/joho/godotenv/autoload"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 var (
 	verifyCodePrefix = "VerifyCode:"
+	loginPrefix = "Login:"
+	jwtExpire,_ = strconv.Atoi(os.Getenv("JWT_EXPIRE"))
 )
 
 type UserService interface {
@@ -116,6 +120,10 @@ func(s *service) Login(login *request.UserLoginRequest,ctx context.Context) (*re
 			return err
 		}else {
 			userInfo.Token = token
+			if err = s.rdb.SetNX(ctx,fmt.Sprintf("%s%s",loginPrefix,user.UUID),userInfo.Token,time.Duration(jwtExpire)*24*time.Hour).Err();err != nil {
+				zaplog.Zap.Error(fmt.Sprintf("set redis failed: %v", err))
+				return err
+			}
 		}
 		if _,err := gorm.G[model.User](tx).Where("email = ?",user.Email).Update(ctx,"last_login_at",time.Now());err != nil {
 			zaplog.Zap.Error(fmt.Sprintf("Update user failed: %v", err))

@@ -6,9 +6,11 @@ import (
 	"GH-Server/pkg/zaplog"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
+	_ "github.com/joho/godotenv/autoload"
 	jwtware "github.com/gofiber/contrib/v3/jwt"
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/extractors"
@@ -17,6 +19,7 @@ import (
 )
 var(
 		jwtSecret = []byte(os.Getenv("JWT_SECRET"))
+		jwtExpire,_ = strconv.Atoi(os.Getenv("JWT_EXPIRE"))
 )
 
 type JwtClaim struct {
@@ -52,7 +55,7 @@ func CreateJwtToken(user *model.User)(string,error){
 		UserName: user.UserName,
 		Email: user.Email,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour*36)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour*24*time.Duration(jwtExpire))),
 		},
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256,claims)
