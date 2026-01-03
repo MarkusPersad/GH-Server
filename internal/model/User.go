@@ -28,6 +28,9 @@ type User struct {
 	
 	LastLoginAt time.Time `gorm:"type:timestamp with time zone;" json:"last_login_at"`
 
+	// 用户状态，默认为未登录0，登录为1
+	Status uint8 `gorm:"default:0" json:"status"`
+
 	// GORM自动管理的时间字段
 	CreatedAt time.Time `gorm:"type:timestamp with time zone;not null" json:"created_at"`
 	UpdatedAt time.Time `gorm:"type:timestamp with time zone;" json:"updated_at"`

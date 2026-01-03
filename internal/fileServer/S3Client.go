@@ -29,16 +29,16 @@ func New() *s3.Client {
 		Region:       region,
 		BaseEndpoint: aws.String(endpoint),
 		Credentials:  aws.NewCredentialsCache(credentials.NewStaticCredentialsProvider(accessKey, secretKey, "")),
-	},func(o *s3.Options) {
+	}, func(o *s3.Options) {
 		o.UsePathStyle = true
 	})
-	if _,err := s3Client.HeadBucket(ctx,&s3.HeadBucketInput{
+	if _, err := s3Client.HeadBucket(ctx, &s3.HeadBucketInput{
 		Bucket: aws.String(bucketName),
-	});err != nil {
-		if _,err = s3Client.CreateBucket(ctx,&s3.CreateBucketInput{
+	}); err != nil {
+		if _, err = s3Client.CreateBucket(ctx, &s3.CreateBucketInput{
 			Bucket: aws.String(bucketName),
-		}); err != nil{
-			zaplog.Zap.Error(fmt.Sprintf("创建bucket失败:%s",err.Error()))
+		}); err != nil {
+			zaplog.Zap.Error(fmt.Sprintf("创建bucket失败:%s", err.Error()))
 		}
 	}
 	return s3Client

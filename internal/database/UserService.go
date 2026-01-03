@@ -125,7 +125,10 @@ func(s *service) Login(login *request.UserLoginRequest,ctx context.Context) (*re
 				return err
 			}
 		}
-		if _,err := gorm.G[model.User](tx).Where("email = ?",user.Email).Update(ctx,"last_login_at",time.Now());err != nil {
+		if _,err := gorm.G[model.User](tx).Where("email = ?",user.Email).Updates(ctx,model.User{
+			LastLoginAt: time.Now(),
+			Status: 1,
+		});err != nil {
 			zaplog.Zap.Error(fmt.Sprintf("Update user failed: %v", err))
 			return err
 		}
