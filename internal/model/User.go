@@ -27,6 +27,7 @@ type User struct {
 	Role uint8 `gorm:"default:0" json:"role"`
 	
 	LastLoginAt time.Time `gorm:"type:timestamp with time zone;" json:"last_login_at"`
+	LastLogoutAt time.Time `gorm:"type:timestamp with time zone;" json:"last_logout_at"`
 
 	// 用户状态，默认为未登录0，登录为1
 	Status uint8 `gorm:"default:0" json:"status"`

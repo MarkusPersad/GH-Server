@@ -16,8 +16,10 @@ import (
 	"strconv"
 	"time"
 
-	_ "github.com/joho/godotenv/autoload"
+	jwtware "github.com/gofiber/contrib/v3/jwt"
+	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
+	_ "github.com/joho/godotenv/autoload"
 	"gorm.io/gorm"
 )
 
@@ -31,6 +33,7 @@ type UserService interface {
 	Register(register *request.UserRegisterRequest, ctx context.Context) error
 	SendVerifyCode(emailVerify *request.UserMailVerifyRequest, ctx context.Context) error
 	Login(login *request.UserLoginRequest,ctx context.Context) (*response.UserInfoResponse,error)
+	Logout(ctx fiber.Ctx) error
 }
 
 // Register 创建新用户并将其信息存储到数据库中
@@ -125,7 +128,9 @@ func(s *service) Login(login *request.UserLoginRequest,ctx context.Context) (*re
 				return err
 			}
 		}
-		if _,err := gorm.G[model.User](tx).Where("email = ?",user.Email).Updates(ctx,model.User{
+		if _,err := gorm.G[model.User](tx).Where("email = ?",user.Email).
+		Select("status","last_login_at").
+		Updates(ctx,model.User{
 			LastLoginAt: time.Now(),
 			Status: 1,
 		});err != nil {
@@ -140,4 +145,35 @@ func(s *service) Login(login *request.UserLoginRequest,ctx context.Context) (*re
 		return nil
 	})
 	return userInfo,err
+}
+
+
+// Logout 使用户退出登录，更新用户状态为离线并从Redis中删除用户的登录信息
+// 参数:
+//   ctx: Fiber上下文，包含JWT用户信息和请求数据
+// 返回值:
+//   error: 操作失败时返回错误，成功时返回nil
+func(s *service) Logout(ctx fiber.Ctx) error{
+	// 从上下文中获取JWT用户信息
+	user := jwtware.FromContext(ctx)
+	jwtClaim := user.Claims.(*middleware.JwtClaim)
+	
+	// 在事务中执行用户状态更新和Redis删除操作
+	err := s.db.Transaction(func(tx *gorm.DB) error {
+		// 更新用户状态为离线，并记录登出时间
+		if _,err := gorm.G[model.User](tx).Where("email = ?",jwtClaim.Email).Select("status","last_logout_at").Updates(ctx,model.User{
+			LastLogoutAt: time.Now(),
+			Status: 0,
+		});err != nil {
+			zaplog.Zap.Error(fmt.Sprintf("Update user failed: %v", err))
+			return err
+		}
+		// 从Redis中删除用户的登录令牌
+		if err := s.rdb.Del(ctx,fmt.Sprintf("%s%s",loginPrefix,jwtClaim.UUID)).Err();err != nil {
+			zaplog.Zap.Error(fmt.Sprintf("del redis failed: %v", err))
+			return err
+		}
+		return nil
+	})
+	return err;
 }

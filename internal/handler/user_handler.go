@@ -14,6 +14,7 @@ import (
 type UserHandler interface {
 	UserRegister(ctx fiber.Ctx) error
 	UserLogin(ctx fiber.Ctx) error
+	UserLogout(ctx fiber.Ctx) error
 }
 
 func (handler *Handler) SendVerifyMail(ctx fiber.Ctx) error {
@@ -59,4 +60,10 @@ func (handler *Handler) UserLogin(ctx fiber.Ctx) error {
 	} else {
 		return ctx.Status(http.StatusOK).JSON(response.Success("登录成功",userInfo))
 	}
+}
+func (handler *Handler) UserLogout(ctx fiber.Ctx) error {
+	if err := handler.Logout(ctx);err != nil {
+		return err
+	}
+	return ctx.Status(http.StatusOK).JSON(response.Success("登出成功",nil))
 }

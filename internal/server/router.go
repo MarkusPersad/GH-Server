@@ -49,6 +49,7 @@ func (server *FiberServer) RegisterRoutes() {
 	userRoute.Post("/register", server.Handler.UserRegister)
 	userRoute.Post("/sendVerifyCode", server.Handler.SendVerifyMail)
 	userRoute.Post("/login",server.UserLogin)
+	userRoute.Get("/logout",server.Handler.UserLogout)
 }
 
 func (server *FiberServer) healthHandler(ctx fiber.Ctx) error {

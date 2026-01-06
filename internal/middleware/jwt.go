@@ -35,7 +35,7 @@ func NewJwtMiddleWare() fiber.Handler{
 			Key: jwtSecret,
 		},
 		Extractor: extractors.FromAuthHeader("Bearer"),
-		Claims: JwtClaim{},
+		Claims: &JwtClaim{},
 		ErrorHandler: func(ctx fiber.Ctx,err error) error{
 			return exceptions.ErrInvalidToken
 		},
