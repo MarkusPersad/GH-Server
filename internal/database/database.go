@@ -37,6 +37,7 @@ var (
 	rdbPassword             = os.Getenv("RDB_PASS")
 	rdbProtocol, _          = strconv.Atoi(os.Getenv("PROTOCOL"))
 	rdbDb, _                = strconv.Atoi(os.Getenv("RDB_DB"))
+	rdbMaxRetries, _        = strconv.Atoi(os.Getenv("RDB_MAX_RETRIES"))
 	instance                *service
 )
 
@@ -79,6 +80,7 @@ func New() Service {
 		Password: rdbPassword,
 		Protocol: rdbProtocol,
 		DB:       rdbDb,
+		MaxRetries: rdbMaxRetries,
 	})
 	if err != nil {
 		zaplog.Zap.Panic(fmt.Sprintf("failed to connect database: %v", err))

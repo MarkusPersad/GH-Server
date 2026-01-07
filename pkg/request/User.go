@@ -9,7 +9,6 @@ type UserRegisterRequest struct {
 	Email      string `json:"email" validate:"required,email"`
 	Password   string `json:"password" validate:"required,min=8"`
 	VerifyCode string `json:"verifyCode" validate:"required"`
-	Avatar     string `json:"avatar"`
 }
 
 type UserLoginRequest struct {

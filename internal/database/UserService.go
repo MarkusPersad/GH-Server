@@ -80,7 +80,6 @@ func (s *service) Register(register *request.UserRegisterRequest, ctx context.Co
 			UserName: register.UserName,
 			Email:    register.Email,
 			Password: hashedPassword,
-			Avatar:   register.Avatar,
 		})
 		if err != nil {
 			zaplog.Zap.Error(fmt.Sprintf("create user failed: %v", err))

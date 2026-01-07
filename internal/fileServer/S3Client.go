@@ -21,9 +21,14 @@ var (
 )
 
 type RustFSService interface {
+	FileUpload
 }
 
-func New() *s3.Client {
+type fileService struct{
+	*s3.Client
+}
+
+func New() RustFSService {
 	ctx := context.Background()
 	s3Client := s3.NewFromConfig(aws.Config{
 		Region:       region,
@@ -41,5 +46,7 @@ func New() *s3.Client {
 			zaplog.Zap.Error(fmt.Sprintf("创建bucket失败:%s", err.Error()))
 		}
 	}
-	return s3Client
+	return &fileService{
+		Client: s3Client,
+	}
 }
