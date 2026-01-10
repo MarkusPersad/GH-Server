@@ -71,8 +71,9 @@ func (handler *Handler) UserLogout(ctx fiber.Ctx) error {
 }
 
 func (handler *Handler) UserUploadAvatar(ctx fiber.Ctx) error {
-	header,exists := ctx.GetReqHeaders()["email"]
+	header,exists := ctx.GetHeaders()["Email"]
 	if !exists || len(header) == 0 {
+		zaplog.Zap.Error(fmt.Sprintf("email not found:%v",ctx.GetHeaders()))
 		return exceptions.ErrBadRequest
 	}
 	fileHeader,err := ctx.FormFile("file")
@@ -86,7 +87,7 @@ func (handler *Handler) UserUploadAvatar(ctx fiber.Ctx) error {
 		return err
 	}
 	defer file.Close()
-	mpo,err := handler.RustFSService.UploadFile(ctx,header[0],file,strings.Split(fileHeader.Filename,".")[1])
+	mpo,err := handler.RustFSService.UploadFile(ctx,fmt.Sprintf("avatar/%s",header[0]),file,strings.Split(fileHeader.Filename,".")[1])
 	if err != nil {
 		zaplog.Zap.Error(fmt.Sprintf("upload file failed: %v", err))
 		return err

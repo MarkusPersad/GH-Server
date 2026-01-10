@@ -43,6 +43,7 @@ func NewJwtMiddleWare() fiber.Handler{
 			return strings.Contains(c.Request().URI().String(),"register")||
 				strings.Contains(c.Request().URI().String(),"login")||
 				strings.Contains(c.Request().URI().String(),"sendVerifyCode") ||
+				strings.Contains(c.Request().URI().String(),"uploadAvatar")||
 				strings.Contains(c.Request().URI().String(),"metrics")||
 				strings.Contains(c.Request().URI().String(),"health")
 		},
