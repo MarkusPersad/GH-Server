@@ -7,6 +7,7 @@ import (
 	"GH-Server/pkg/zaplog"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/gofiber/fiber/v3"
 )
@@ -15,6 +16,7 @@ type UserHandler interface {
 	UserRegister(ctx fiber.Ctx) error
 	UserLogin(ctx fiber.Ctx) error
 	UserLogout(ctx fiber.Ctx) error
+	UserUploadAvatar(ctx fiber.Ctx) error
 }
 
 func (handler *Handler) SendVerifyMail(ctx fiber.Ctx) error {
@@ -66,4 +68,32 @@ func (handler *Handler) UserLogout(ctx fiber.Ctx) error {
 		return err
 	}
 	return ctx.Status(http.StatusOK).JSON(response.Success("登出成功",nil))
+}
+
+func (handler *Handler) UserUploadAvatar(ctx fiber.Ctx) error {
+	header,exists := ctx.GetReqHeaders()["email"]
+	if !exists || len(header) == 0 {
+		return exceptions.ErrBadRequest
+	}
+	fileHeader,err := ctx.FormFile("file")
+	if err != nil {
+		zaplog.Zap.Error(fmt.Sprintf("get file failed: %v", err))
+		return exceptions.ErrBadRequest
+	}
+	file,err := fileHeader.Open()
+	if err != nil {
+		zaplog.Zap.Error(fmt.Sprintf("open file failed: %v", err))
+		return err
+	}
+	defer file.Close()
+	mpo,err := handler.RustFSService.UploadFile(ctx,header[0],file,strings.Split(fileHeader.Filename,".")[1])
+	if err != nil {
+		zaplog.Zap.Error(fmt.Sprintf("upload file failed: %v", err))
+		return err
+	}
+	if err := handler.Service.UploadAvatar(ctx,header[0],mpo.Location); err != nil {
+		return err
+	}
+
+	return ctx.Status(http.StatusOK).JSON(response.Success("上传成功",nil))
 }

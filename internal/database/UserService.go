@@ -34,6 +34,7 @@ type UserService interface {
 	SendVerifyCode(emailVerify *request.UserMailVerifyRequest, ctx context.Context) error
 	Login(login *request.UserLoginRequest,ctx context.Context) (*response.UserInfoResponse,error)
 	Logout(ctx fiber.Ctx) error
+	UploadAvatar(ctx context.Context,email string,avatar string) error
 }
 
 // Register 创建新用户并将其信息存储到数据库中
@@ -175,4 +176,13 @@ func(s *service) Logout(ctx fiber.Ctx) error{
 		return nil
 	})
 	return err;
+}
+func(s *service)UploadAvatar(ctx context.Context,email string,avatar string) error {
+	if _,err := gorm.G[model.User](s.db).Where("email = ?",email).Select("avatar").Updates(ctx,model.User{
+		Avatar: avatar,
+	}); err != nil {
+		zaplog.Zap.Error(fmt.Sprintf("Failed to Update:%v",err))
+		return err
+	}
+	return nil
 }
