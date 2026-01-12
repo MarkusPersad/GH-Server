@@ -5,9 +5,9 @@ import (
 	"GH-Server/pkg/request"
 	"GH-Server/pkg/response"
 	"GH-Server/pkg/zaplog"
+	"bytes"
 	"fmt"
 	"net/http"
-	"strings"
 
 	"github.com/gofiber/fiber/v3"
 )
@@ -71,28 +71,22 @@ func (handler *Handler) UserLogout(ctx fiber.Ctx) error {
 }
 
 func (handler *Handler) UserUploadAvatar(ctx fiber.Ctx) error {
-	header,exists := ctx.GetHeaders()["Email"]
-	if !exists || len(header) == 0 {
+	emailHeader,exists := ctx.GetHeaders()["Email"]
+	if !exists || len(emailHeader) == 0 {
 		zaplog.Zap.Error(fmt.Sprintf("email not found:%v",ctx.GetHeaders()))
 		return exceptions.ErrBadRequest
 	}
-	fileHeader,err := ctx.FormFile("file")
-	if err != nil {
-		zaplog.Zap.Error(fmt.Sprintf("get file failed: %v", err))
+	contentTypeHeader,exists := ctx.GetHeaders()["Content-Type"]
+	if !exists || len(contentTypeHeader) == 0 {
+		zaplog.Zap.Error(fmt.Sprintf("content-type not found:%v",ctx.GetHeaders()))
 		return exceptions.ErrBadRequest
 	}
-	file,err := fileHeader.Open()
-	if err != nil {
-		zaplog.Zap.Error(fmt.Sprintf("open file failed: %v", err))
-		return err
-	}
-	defer file.Close()
-	mpo,err := handler.RustFSService.UploadFile(ctx,fmt.Sprintf("avatar/%s",header[0]),file,strings.Split(fileHeader.Filename,".")[1])
+	mpo,err := handler.RustFSService.UploadFile(ctx,fmt.Sprintf("avatar/%s",emailHeader[0]),bytes.NewReader(ctx.BodyRaw()),contentTypeHeader[0])
 	if err != nil {
 		zaplog.Zap.Error(fmt.Sprintf("upload file failed: %v", err))
 		return err
 	}
-	if err := handler.Service.UploadAvatar(ctx,header[0],mpo.Location); err != nil {
+	if err := handler.Service.UploadAvatar(ctx,emailHeader[0],mpo.Location); err != nil {
 		return err
 	}
 

@@ -9,18 +9,15 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
-
-
-type FileUpload interface{
-	UploadFile(ctx context.Context, key string, data io.Reader, contentType string) (*manager.UploadOutput,error)
+type FileUpload interface {
+	UploadFile(ctx context.Context, key string, data io.Reader, contentType string) (*manager.UploadOutput, error)
 }
 
-func(fs *fileService) UploadFile(ctx context.Context, key string, data io.Reader, contentType string) (*manager.UploadOutput,error){
-	uploader := manager.NewUploader(fs.Client)
-	return  uploader.Upload(ctx,&s3.PutObjectInput{
-		Bucket: aws.String(bucketName),
-		Key: aws.String(key),
-		Body: data,
+func (fs *fileService) UploadFile(ctx context.Context, key string, data io.Reader, contentType string) (*manager.UploadOutput, error) {
+	return manager.NewUploader(fs.Client).Upload(ctx, &s3.PutObjectInput{
+		Bucket:      aws.String(bucketName),
+		Key:         aws.String(key),
+		Body:        data,
 		ContentType: aws.String(contentType),
 	})
 }
