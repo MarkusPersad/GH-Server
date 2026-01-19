@@ -57,38 +57,38 @@ func (handler *Handler) UserLogin(ctx fiber.Ctx) error {
 	if err := handler.Validate(login); err != nil {
 		return exceptions.ErrInvalidParameters
 	}
-	if userInfo,err := handler.Login(login,ctx);err != nil {
+	if userInfo, err := handler.Login(login, ctx); err != nil {
 		return err
 	} else {
-		return ctx.Status(http.StatusOK).JSON(response.Success("登录成功",userInfo))
+		return ctx.Status(http.StatusOK).JSON(response.Success("登录成功", userInfo))
 	}
 }
 func (handler *Handler) UserLogout(ctx fiber.Ctx) error {
-	if err := handler.Logout(ctx);err != nil {
+	if err := handler.Logout(ctx); err != nil {
 		return err
 	}
-	return ctx.Status(http.StatusOK).JSON(response.Success("登出成功",nil))
+	return ctx.Status(http.StatusOK).JSON(response.Success("登出成功", nil))
 }
 
 func (handler *Handler) UserUploadAvatar(ctx fiber.Ctx) error {
-	emailHeader,exists := ctx.GetHeaders()["Email"]
+	emailHeader, exists := ctx.GetHeaders()["Email"]
 	if !exists || len(emailHeader) == 0 {
-		zaplog.Zap.Error(fmt.Sprintf("email not found:%v",ctx.GetHeaders()))
+		zaplog.Zap.Error(fmt.Sprintf("email not found:%v", ctx.GetHeaders()))
 		return exceptions.ErrBadRequest
 	}
-	contentTypeHeader,exists := ctx.GetHeaders()["Content-Type"]
+	contentTypeHeader, exists := ctx.GetHeaders()["Content-Type"]
 	if !exists || len(contentTypeHeader) == 0 {
-		zaplog.Zap.Error(fmt.Sprintf("content-type not found:%v",ctx.GetHeaders()))
+		zaplog.Zap.Error(fmt.Sprintf("content-type not found:%v", ctx.GetHeaders()))
 		return exceptions.ErrBadRequest
 	}
-	mpo,err := handler.RustFSService.UploadFile(ctx,fmt.Sprintf("avatar/%s",emailHeader[0]),bytes.NewReader(ctx.BodyRaw()),contentTypeHeader[0])
+	mpo, err := handler.RustFSService.UploadSingleFile(ctx, fmt.Sprintf("avatar/%s", emailHeader[0]), bytes.NewReader(ctx.BodyRaw()), contentTypeHeader[0])
 	if err != nil {
 		zaplog.Zap.Error(fmt.Sprintf("upload file failed: %v", err))
 		return err
 	}
-	if err := handler.Service.UploadAvatar(ctx,emailHeader[0],mpo.Location); err != nil {
+	if err := handler.Service.UploadAvatar(ctx, emailHeader[0], mpo.Location); err != nil {
 		return err
 	}
 
-	return ctx.Status(http.StatusOK).JSON(response.Success("上传成功",nil))
+	return ctx.Status(http.StatusOK).JSON(response.Success("上传成功", nil))
 }
