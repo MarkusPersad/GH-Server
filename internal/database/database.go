@@ -49,6 +49,7 @@ type service struct {
 type Service interface {
 	Health() map[string]string
 	UserService
+	GetRedisClient() *redis.Client
 }
 
 func New() Service {
@@ -91,6 +92,10 @@ func New() Service {
 		zaplog.Zap.Error(fmt.Sprintf("failed to migrate database: %v", err))
 	}
 	return instance
+}
+
+func(s *service) GetRedisClient() *redis.Client{
+	return s.rdb
 }
 
 func (s *service) Health() map[string]string {

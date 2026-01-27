@@ -35,7 +35,10 @@ func (server *FiberServer) RegisterRoutes() {
 	server.App.Use(recover.New(recover.ConfigDefault))
 	
 	//JWT
-	server.App.Use(middleware.NewJwtMiddleWare())
+	// server.App.Use(middleware.NewJwtMiddleWare())
+
+	// SaToken-Go+FiberV3--> SaTokenMiddleware
+	middleware.SaTokenMiddleware(server.GetRedisClient())
 
 	// Database  health
 	server.App.Get("/health", server.healthHandler)
