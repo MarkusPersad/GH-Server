@@ -2,6 +2,7 @@ package database
 
 import (
 	"GH-Server/internal/middleware"
+	fibersatoken "GH-Server/internal/middleware/fiber-sa-token"
 	"GH-Server/internal/model"
 	"GH-Server/pkg/exceptions"
 	"GH-Server/pkg/request"
@@ -119,14 +120,11 @@ func(s *service) Login(login *request.UserLoginRequest,ctx context.Context) (*re
 			zaplog.Zap.Error(fmt.Sprintf("Password Compare Failed:%v",err))
 			return err
 		}
-		if token,err := middleware.CreateJwtToken(user);err != nil {
+		if token,err := fibersatoken.Login(user.UUID.String());err != nil {
+			zaplog.Zap.Error(fmt.Sprintf("Token String Generated Failed:%v",err))
 			return err
 		}else {
 			userInfo.Token = token
-			if err = s.rdb.SetNX(ctx,fmt.Sprintf("%s%s",loginPrefix,user.UUID),userInfo.Token,time.Duration(jwtExpire)*24*time.Hour).Err();err != nil {
-				zaplog.Zap.Error(fmt.Sprintf("set redis failed: %v", err))
-				return err
-			}
 		}
 		if _,err := gorm.G[model.User](tx).Where("email = ?",user.Email).
 		Select("status","last_login_at").

@@ -18,7 +18,7 @@ import (
 	"github.com/google/uuid"
 )
 var(
-		jwtSecret = []byte(os.Getenv("JWT_SECRET"))
+		jwtSecret = os.Getenv("JWT_SECRET")
 		jwtExpire,_ = strconv.Atoi(os.Getenv("JWT_EXPIRE"))
 )
 
@@ -32,7 +32,7 @@ type JwtClaim struct {
 func NewJwtMiddleWare() fiber.Handler{
 	return jwtware.New(jwtware.Config{
 		SigningKey: jwtware.SigningKey{
-			Key: jwtSecret,
+			Key: []byte(jwtSecret),
 		},
 		Extractor: extractors.FromAuthHeader("Bearer"),
 		Claims: &JwtClaim{},
