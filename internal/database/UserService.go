@@ -120,20 +120,20 @@ func(s *service) Login(login *request.UserLoginRequest,ctx context.Context) (*re
 			zaplog.Zap.Error(fmt.Sprintf("Password Compare Failed:%v",err))
 			return err
 		}
-		if token,err := fibersatoken.Login(user.UUID.String());err != nil {
-			zaplog.Zap.Error(fmt.Sprintf("Token String Generated Failed:%v",err))
-			return err
-		}else {
-			userInfo.Token = token
-		}
 		if _,err := gorm.G[model.User](tx).Where("email = ?",user.Email).
-		Select("status","last_login_at").
+		Select("status","last_login_at","version").
 		Updates(ctx,model.User{
 			LastLoginAt: time.Now(),
 			Status: 1,
 		});err != nil {
 			zaplog.Zap.Error(fmt.Sprintf("Update user failed: %v", err))
 			return err
+		}
+		if token,err := fibersatoken.Login(user.UUID.String());err != nil {
+			zaplog.Zap.Error(fmt.Sprintf("Token String Generated Failed:%v",err))
+			return err
+		}else {
+			userInfo.Token = token
 		}
 		userInfo.Avatar = user.Avatar
 		userInfo.Email = user.Email

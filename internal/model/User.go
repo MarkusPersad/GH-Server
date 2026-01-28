@@ -5,7 +5,6 @@ import (
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
-	"gorm.io/plugin/optimisticlock"
 )
 
 type User struct {
@@ -40,5 +39,6 @@ type User struct {
 	DeletedAt gorm.DeletedAt `gorm:"type:timestamp with time zone;index" json:"deleted_at"`
 
 	// 乐观锁版本控制
-	Version optimisticlock.Version
+	// Version optimisticlock.Version
+	Versioned
 }
