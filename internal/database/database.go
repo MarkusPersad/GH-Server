@@ -4,7 +4,6 @@ import (
 	"GH-Server/internal/model"
 	"GH-Server/pkg/zaplog"
 	"context"
-	"database/sql"
 	"fmt"
 	"math"
 	"os"
@@ -12,13 +11,11 @@ import (
 	"strings"
 	"time"
 
-	_ "github.com/jackc/pgx/v5/stdlib"
+	_ "github.com/lib/pq"
 	_ "github.com/joho/godotenv/autoload"
 	"github.com/redis/go-redis/v9"
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
-	"gorm.io/gorm/schema"
+	"xorm.io/xorm"
+	"xorm.io/xorm/names"
 )
 
 var (
@@ -42,7 +39,7 @@ var (
 )
 
 type service struct {
-	db  *gorm.DB
+	xdb  *xorm.Engine
 	rdb *redis.Client
 }
 
@@ -56,26 +53,15 @@ func New() Service {
 	if instance != nil {
 		return instance
 	}
-	db, err := gorm.Open(postgres.New(postgres.Config{
-		DSN: fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=%s TimeZone=Asia/Shanghai",
+	xdb,err := xorm.NewEngine("postgres",fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=%s TimeZone=Asia/Shanghai",
 			dbHost, dbUser, dbPassword, dbName, dbPort, dbSslMode,
-		),
-		PreferSimpleProtocol: true,
-	}), &gorm.Config{
-		SkipDefaultTransaction: true,
-		NamingStrategy: schema.NamingStrategy{
-			SingularTable: true,
-		},
-		Logger: logger.Default.LogMode(logger.Silent),
-	})
-	if Db, err := db.DB(); err != nil {
-		zaplog.Zap.Panic(fmt.Sprintf("failed to connect database: %v", err))
-	} else {
-		Db.SetConnMaxLifetime(time.Duration(dbMaxLifeTime) * time.Minute)
-		Db.SetConnMaxIdleTime(time.Duration(dbMaxIdleTime) * time.Minute)
-		Db.SetMaxIdleConns(dbMaxIdleConnections)
-		Db.SetMaxOpenConns(dbMaxOpenConnections)
-	}
+		),)
+	xdb.SetMaxIdleConns(dbMaxIdleConnections)
+	xdb.SetMaxOpenConns(dbMaxOpenConnections)
+	xdb.SetConnMaxLifetime(time.Duration(dbMaxLifeTime)*time.Minute)
+	xdb.SetConnMaxIdleTime(time.Duration(dbMaxIdleTime)*time.Minute)
+	xdb.SetTZLocation(time.Local)
+	xdb.SetMapper(names.LintGonicMapper)
 	rdb := redis.NewClient(&redis.Options{
 		Addr:     fmt.Sprintf("%s:%s", rdbHost, rdbPort),
 		Password: rdbPassword,
@@ -86,11 +72,12 @@ func New() Service {
 	if err != nil {
 		zaplog.Zap.Panic(fmt.Sprintf("failed to connect database: %v", err))
 	}
-	instance = &service{db: db, rdb: rdb}
+	instance = &service{xdb: xdb, rdb: rdb}
 
-	if err := db.AutoMigrate(&model.User{}); err != nil {
-		zaplog.Zap.Error(fmt.Sprintf("failed to migrate database: %v", err))
+	if err := xdb.Sync(new(model.Account)); err != nil {
+		zaplog.Zap.Panic(fmt.Sprintf("failed to sync database: %v", err))
 	}
+	
 	return instance
 }
 
@@ -102,18 +89,7 @@ func (s *service) Health() map[string]string {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 	stats := make(map[string]string)
-	var Db *sql.DB
-	var err error
-	if Db, err = s.db.DB(); err != nil {
-		zaplog.Zap.Panic(fmt.Sprintf("failed to connect database: %v", err))
-	} else {
-		if err = Db.PingContext(ctx); err != nil {
-			stats["status"] = "down"
-			stats["error"] = fmt.Sprintf("db down: %v", err)
-			zaplog.Zap.Fatal(fmt.Sprintf("db down: %v", err))
-			return stats
-		}
-	}
+	Db := s.xdb.DB().DB
 	stats["DB status"] = "up"
 	stats["DB message"] = "It's healthy"
 

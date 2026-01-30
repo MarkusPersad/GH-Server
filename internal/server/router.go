@@ -2,6 +2,7 @@ package server
 
 import (
 	"GH-Server/internal/middleware"
+	fibersatoken "GH-Server/internal/middleware/fiber-sa-token"
 	"GH-Server/pkg/zaplog"
 
 	"github.com/gofiber/contrib/v3/monitor"
@@ -39,9 +40,10 @@ func (server *FiberServer) RegisterRoutes() {
 
 	// SaToken-Go+FiberV3--> SaTokenMiddleware
 	middleware.SaTokenMiddleware(server.GetRedisClient())
+	saPlugin:= fibersatoken.NewPlugin(fibersatoken.GetManager())
 
 	// Database  health
-	server.App.Get("/health", server.healthHandler)
+	server.App.Get("/health", saPlugin.AuthMiddleware(),server.healthHandler)
 
 	// Metrics
 	server.App.Get("/metrics", monitor.New(monitor.Config{
@@ -52,7 +54,7 @@ func (server *FiberServer) RegisterRoutes() {
 	userRoute.Post("/register", server.Handler.UserRegister)
 	userRoute.Post("/sendVerifyCode", server.Handler.SendVerifyMail)
 	userRoute.Post("/login",server.UserLogin)
-	userRoute.Get("/logout",server.Handler.UserLogout)
+	userRoute.Get("/logout",saPlugin.AuthMiddleware(), server.Handler.UserLogout)
 	userRoute.Post("/uploadAvatar",server.UserUploadAvatar)
 }
 
