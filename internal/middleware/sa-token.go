@@ -46,9 +46,9 @@ func SaTokenMiddleware(rdb *rds.Client) {
 			AutoRenew(autoRenew).
 			KeyPrefix(keyPrefix).
 			IsLog(isLog).
-            Timeout(int64(timeout)).                      // 24 hours
-            TokenStyle(core.TokenStyleJWT). // Token style
-            IsPrintBanner(false).                 // Show startup banner
+            Timeout(int64(timeout)).                      
+            TokenStyle(core.TokenStyleJWT). 
+            IsPrintBanner(false).                
             Build(),
 	)
 }
