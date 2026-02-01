@@ -43,3 +43,40 @@ services:
       - $HOME/data/rustfs:/data
       # 日志目录
       - $HOME/data/logs/rustfs:/app/logs
+  geoserver:
+    image: docker.osgeo.org/geoserver:2.28.2
+    container_name: geoserver
+    ports:
+      - "8082:8080"
+    environment:
+      # 管理员账户设置
+      - GEOSERVER_ADMIN_USER=admin
+      - GEOSERVER_ADMIN_PASSWORD=1234567890
+      
+      # 安装扩展插件（逗号分隔，无空格）
+      - INSTALL_EXTENSIONS=true
+      - STABLE_EXTENSIONS=vectortiles,wps,csw,ysld
+      
+      # JVM 优化参数（根据服务器内存调整）
+      - JAVA_OPTS=-server -Xms4g -Xmx4g -XX:+UseG1GC -XX:MaxGCPauseMillis=200
+      
+      # 数据目录路径（容器内固定路径）
+      - GEOSERVER_DATA_DIR=/opt/geoserver_data
+      
+    volumes:
+      # 数据目录挂载（本地路径:容器路径）
+      - $HOME/data/geoserver/data:/opt/geoserver_data
+      
+      # 可选：挂载额外的字体目录（用于地图标注中文显示）
+      - $HOME/data/geoserver/fonts:/usr/share/fonts/extra:ro
+      
+      # 可选：挂载 GeoServer 日志配置
+      - $HOME/data/geoserver/logs:/opt/geoserver/logs
+      
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/geoserver/index.html"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
