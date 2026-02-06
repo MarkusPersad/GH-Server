@@ -109,6 +109,9 @@ func(s *service) Login(login *request.UserLoginRequest,ctx context.Context) (*re
 		} else {
 			user = &usr 
 		}
+		if user.Status == 1 {
+			return exceptions.ErrAccountLogined
+		}
 		if err := utils.ComparedWithPassword(user.Password,login.Password);err != nil {
 			return err
 		}

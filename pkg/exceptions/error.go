@@ -54,6 +54,6 @@ var (
 	ErrUsernameAlreadyExists   = NewException(1010, "用户名已被占用")
 	ErrInvalidVerificationCode = NewException(1011, "验证码错误")
 	ErrVerificationCodeExpired = NewException(1012, "验证码已过期")
-	ErrAccountLocked           = NewException(1013, "账户已被锁定")
+	ErrAccountLogined          = NewException(1013, "账户已登录")
 	ErrAccountNotActivated     = NewException(1014, "账户未激活")
 )
