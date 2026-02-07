@@ -8,7 +8,6 @@ import (
 	"GH-Server/pkg/response"
 	"GH-Server/pkg/utils"
 	"GH-Server/pkg/zaplog"
-	"context"
 	"errors"
 	"fmt"
 	"math/rand"
@@ -33,11 +32,11 @@ const(
 )
 
 type UserService interface {
-	Register(register *request.UserRegisterRequest, ctx context.Context) error
-	SendVerifyCode(emailVerify *request.UserMailVerifyRequest, ctx context.Context) error
-	Login(login *request.UserLoginRequest,ctx context.Context) (*response.UserInfoResponse,error)
+	Register(register *request.UserRegisterRequest, ctx fiber.Ctx) error
+	SendVerifyCode(emailVerify *request.UserMailVerifyRequest, ctx fiber.Ctx) error
+	Login(login *request.UserLoginRequest,ctx fiber.Ctx) (*response.UserInfoResponse,error)
 	Logout(ctx fiber.Ctx) error
-	UploadAvatar(ctx context.Context,email string,avatar string) error
+	UploadAvatar(ctx fiber.Ctx,email string,avatar string) error
 }
 
 // Register 创建新用户并将其信息存储到数据库中
@@ -48,7 +47,7 @@ type UserService interface {
 //
 // 返回值:
 //   - error: 如果在创建用户过程中出现错误则返回错误信息，否则返回nil
-func (s *service) Register(register *request.UserRegisterRequest, ctx context.Context) error {
+func (s *service) Register(register *request.UserRegisterRequest, ctx fiber.Ctx) error {
 	return s.gdb.Transaction(func(tx *gorm.DB) error {
 		if _,err := gorm.G[model.User](tx).Where("email = ?",register.Email).First(ctx); err == nil {
 			return exceptions.ErrUserAlreadyExists
@@ -83,7 +82,7 @@ func (s *service) Register(register *request.UserRegisterRequest, ctx context.Co
 	})
 }
 
-func (s *service) SendVerifyCode(emailVerify *request.UserMailVerifyRequest, ctx context.Context) error {
+func (s *service) SendVerifyCode(emailVerify *request.UserMailVerifyRequest, ctx fiber.Ctx) error {
 	code := rand.Intn(900000) + 100000
 	if err := utils.VerifyMailSend(emailVerify.Email, emailVerify.UserName, strconv.Itoa(code)); err != nil {
 		return err
@@ -95,7 +94,7 @@ func (s *service) SendVerifyCode(emailVerify *request.UserMailVerifyRequest, ctx
 	return nil
 }
 
-func(s *service) Login(login *request.UserLoginRequest,ctx context.Context) (*response.UserInfoResponse,error) {
+func(s *service) Login(login *request.UserLoginRequest,ctx fiber.Ctx) (*response.UserInfoResponse,error) {
 	userInfo := new(response.UserInfoResponse)
 	err := s.gdb.Transaction(func(tx *gorm.DB) error {
 		user := new(model.User)
@@ -109,7 +108,13 @@ func(s *service) Login(login *request.UserLoginRequest,ctx context.Context) (*re
 		} else {
 			user = &usr 
 		}
-		if user.Status == 1 {
+		if err := fibersatoken.CheckLogin(user.UUID.String()); err == nil {
+			zaplog.Zap.Error(fmt.Sprintf("user %s is already logged in", user.UUID.String()))
+			return exceptions.ErrAccountLogined
+		} else{
+			zaplog.Zap.Info(fmt.Sprintf("checkLogin:%v",err))
+		}
+		if user.Status == 1  {
 			return exceptions.ErrAccountLogined
 		}
 		if err := utils.ComparedWithPassword(user.Password,login.Password);err != nil {
@@ -180,7 +185,7 @@ func(s *service) Logout(ctx fiber.Ctx) error{
 		return nil
 	})
 }
-func(s *service)UploadAvatar(ctx context.Context,email string,avatar string) error {
+func(s *service)UploadAvatar(ctx fiber.Ctx,email string,avatar string) error {
 	return s.gdb.Transaction(func(tx *gorm.DB) error {
 		if _,err := gorm.G[model.User](tx).Where("email = ? ",email).First(ctx); err != nil {
 			if errors.Is(err,gorm.ErrRecordNotFound) {

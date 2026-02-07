@@ -7,8 +7,19 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
+const (
+	ValidatorSTATENAME = "StructValidator"
+)
+
 type StructValidator struct {
 	Validator *validator.Validate
+}
+
+
+func NewValidator() *StructValidator {
+	return &StructValidator{
+		Validator: validator.New(),
+	}
 }
 
 func (sv *StructValidator) Validate(body any) error {

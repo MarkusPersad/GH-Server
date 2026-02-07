@@ -12,6 +12,10 @@ import (
 	_ "github.com/joho/godotenv/autoload"
 )
 
+const (
+	STATENAME = "S3Client"
+)
+
 var (
 	endpoint   = os.Getenv("RUSTFS_ENDPOINT")
 	accessKey  = os.Getenv("RUSTFS_ACCESS_KEY")

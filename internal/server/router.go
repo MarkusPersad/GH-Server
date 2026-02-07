@@ -1,6 +1,8 @@
 package server
 
 import (
+	"GH-Server/internal/database"
+	"GH-Server/internal/handler"
 	"GH-Server/internal/middleware"
 	fibersatoken "GH-Server/internal/middleware/fiber-sa-token"
 	"GH-Server/pkg/zaplog"
@@ -39,7 +41,7 @@ func (server *FiberServer) RegisterRoutes() {
 	// server.App.Use(middleware.NewJwtMiddleWare())
 
 	// SaToken-Go+FiberV3--> SaTokenMiddleware
-	middleware.SaTokenMiddleware(server.GetRedisClient())
+	middleware.SaTokenMiddleware(server.State().MustGet(database.STATENAME).(database.Service).GetRedisClient())
 	saPlugin:= fibersatoken.NewPlugin(fibersatoken.GetManager())
 
 	// Database  health
@@ -51,13 +53,13 @@ func (server *FiberServer) RegisterRoutes() {
 	}))
 
 	userRoute := server.App.Group("/user")
-	userRoute.Post("/register", server.Handler.UserRegister)
-	userRoute.Post("/sendVerifyCode", server.Handler.SendVerifyMail)
-	userRoute.Post("/login",server.UserLogin)
-	userRoute.Get("/logout",saPlugin.AuthMiddleware(), server.Handler.UserLogout)
-	userRoute.Post("/uploadAvatar",server.UserUploadAvatar)
+	userRoute.Post("/register", handler.UserRegister)
+	userRoute.Post("/sendVerifyCode", handler.SendVerifyMail)
+	userRoute.Post("/login",handler.UserLogin)
+	userRoute.Get("/logout",saPlugin.AuthMiddleware(), handler.UserLogout)
+	userRoute.Post("/uploadAvatar",handler.UserUploadAvatar)
 }
 
 func (server *FiberServer) healthHandler(ctx fiber.Ctx) error {
-	return ctx.JSON(server.Health())
+	return ctx.JSON(server.State().MustGet(database.STATENAME).(database.Service).Health())
 }

@@ -20,6 +20,9 @@ import (
 	"gorm.io/gorm/logger"
 	"gorm.io/gorm/schema"
 )
+const (
+	STATENAME = "Database"
+)
 
 var (
 	dbHost                  = os.Getenv("DB_HOST")
