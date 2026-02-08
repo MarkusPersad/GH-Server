@@ -9,5 +9,4 @@ type UserInfoResponse struct {
 	Email string `json:"email"`
 	Avatar string `json:"avatar"`
 	Role string `json:"role"`
-	Token string `json:"token"`
 }

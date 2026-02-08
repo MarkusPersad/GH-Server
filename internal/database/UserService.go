@@ -1,7 +1,6 @@
 package database
 
 import (
-	fibersatoken "GH-Server/internal/middleware/fiber-sa-token"
 	"GH-Server/internal/model"
 	"GH-Server/pkg/exceptions"
 	"GH-Server/pkg/request"
@@ -15,6 +14,7 @@ import (
 	"strconv"
 	"time"
 
+	jwtware "github.com/gofiber/contrib/v3/jwt"
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 	_ "github.com/joho/godotenv/autoload"
@@ -24,7 +24,11 @@ import (
 var (
 	verifyCodePrefix = "VerifyCode:"
 	loginPrefix = "Login:"
-	jwtExpire,_ = strconv.Atoi(os.Getenv("JWT_EXPIRE"))
+	appName = os.Getenv("APP_NAME")
+	blackList = "blacklist:"
+	refresh = "refresh:"
+	refreshHeader = "X-Refresh"
+	accessHeader = "Authorization"
 )
 const(
 	UserRole = "user"
@@ -108,14 +112,11 @@ func(s *service) Login(login *request.UserLoginRequest,ctx fiber.Ctx) (*response
 		} else {
 			user = &usr 
 		}
-		if err := fibersatoken.CheckLogin(user.UUID.String()); err == nil {
-			zaplog.Zap.Error(fmt.Sprintf("user %s is already logged in", user.UUID.String()))
-			return exceptions.ErrAccountLogined
-		} else{
-			zaplog.Zap.Info(fmt.Sprintf("checkLogin:%v",err))
-		}
 		if user.Status == 1  {
 			return exceptions.ErrAccountLogined
+		}
+		if err := CheckLogin(ctx,user.UUID.String()); err != nil {
+			return err
 		}
 		if err := utils.ComparedWithPassword(user.Password,login.Password);err != nil {
 			return err
@@ -129,17 +130,16 @@ func(s *service) Login(login *request.UserLoginRequest,ctx fiber.Ctx) (*response
 			zaplog.Zap.Error(fmt.Sprintf("Update user failed: %v", err))
 			return err
 		}
-		if token,err := fibersatoken.Login(user.UUID.String()); err != nil {
+		if token,err := utils.CreateAccessToken(user.UUID.String()); err != nil {
 			zaplog.Zap.Error(fmt.Sprintf("Token String Generated Failed:%v",err))
 			return err
 		} else {
-			userInfo.Token = token
+			ctx.Set(accessHeader,token)
 		}
-		if err := fibersatoken.GetManager().SetRoles(userInfo.Token,[]string{
-			user.Role,
-		}); err != nil {
-			zaplog.Zap.Error(fmt.Sprintf("set roles failed: %v",err))
+		if token,err := utils.CreateRefreshToken(ctx,s.rdb,user.UUID.String(),user.Role); err != nil {
 			return err
+		} else {
+			ctx.Set(refreshHeader,token)
 		}
 		userInfo.UUID = user.UUID
 		userInfo.UserName = user.UserName
@@ -159,17 +159,13 @@ func(s *service) Login(login *request.UserLoginRequest,ctx fiber.Ctx) (*response
 //   error: 操作失败时返回错误，成功时返回nil
 func(s *service) Logout(ctx fiber.Ctx) error{
 	return s.gdb.Transaction(func(tx *gorm.DB) error {
-		saCtx,ok := fibersatoken.GetSaToken(ctx)
-		if !ok {
-			zaplog.Zap.Error("get sa token failed")
-			return errors.New("get sa-token failed")
-		}
-		var accountID string
-		if loginID,err := saCtx.GetLoginID();err != nil {
-			zaplog.Zap.Error(fmt.Sprintf("get login id failed: %v", err))
+		accountID,err := jwtware.FromContext(ctx).Claims.GetSubject()
+		if err != nil {
+			zaplog.Zap.Error(fmt.Sprintf("Get accountID failed: %v", err))
 			return err
-		} else {
-			accountID = loginID
+		}
+		if err := CheckLogin(ctx,accountID); err != nil {
+			return err
 		}
 		if _,err := gorm.G[model.User](tx).Where("uuid = ? ",accountID).Select("status","last_logout_at","version").Updates(ctx,model.User{
 			LastLogoutAt: time.Now(),
@@ -178,8 +174,8 @@ func(s *service) Logout(ctx fiber.Ctx) error{
 			zaplog.Zap.Error(fmt.Sprintf("Update user failed: %v", err))
 			return err
 		}
-		if err := fibersatoken.Logout(accountID);err != nil {
-			zaplog.Zap.Error(fmt.Sprintf("Logout user failed: %v", err))
+		if err:= s.rdb.Del(ctx,fmt.Sprintf("%s%s",refresh,accountID)).Err(); err != nil {
+			zaplog.Zap.Error(fmt.Sprintf("Redis Del Error:%v",err))
 			return err
 		}
 		return nil
@@ -202,4 +198,30 @@ func(s *service)UploadAvatar(ctx fiber.Ctx,email string,avatar string) error {
 		}
 		return nil
 	})
+}
+
+
+func CheckLogin(ctx fiber.Ctx,uuid string) error {
+	databaseInstance,ok := ctx.App().State().MustGet(STATENAME).(Service)
+	if !ok {
+		zaplog.Zap.Error("Database not initialized")
+		return exceptions.ErrInternalServerError
+	}
+	cmdBool,err := databaseInstance.GetRedisClient().SIsMember(ctx,fmt.Sprintf("%s%s",blackList,appName),uuid).Result()
+	if err != nil {
+		zaplog.Zap.Error(fmt.Sprintf("Redis SIsMember Error:%v",err))
+		return exceptions.ErrInternalServerError
+	}
+	if cmdBool {
+		return exceptions.ErrAccountLocked
+	}
+	cmdInt,err := databaseInstance.GetRedisClient().Exists(ctx,fmt.Sprintf("%s%s",refresh,uuid)).Result()
+	if err != nil {
+		zaplog.Zap.Error(fmt.Sprintf("Redis Exists Error:%v",err))
+		return exceptions.ErrInternalServerError
+	}
+	if cmdInt != 0 {
+		return exceptions.ErrAccountLogined
+	}
+	return nil
 }
