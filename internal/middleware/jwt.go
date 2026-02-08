@@ -29,10 +29,12 @@ var (
 )
 
 func JwtErrorHandler(ctx fiber.Ctx,err error) error{
-	if errors.Is(err,extractors.ErrNotFound)||errors.Is(err,jwt.ErrTokenInvalidClaims){
+	if errors.Is(err,extractors.ErrNotFound){
+		zaplog.Zap.Error(fmt.Sprintf("Get Subject Error:%v",err))
 		return exceptions.ErrInvalidToken
 	}
 	if errors.Is(err,jwt.ErrTokenExpired){
+		zaplog.Zap.Error(fmt.Sprintf("Token Expired Error:%v",err))
 		return exceptions.ErrTokenExpired
 	}
 	zaplog.Zap.Error(fmt.Sprintf("Token Error:%v",err))
