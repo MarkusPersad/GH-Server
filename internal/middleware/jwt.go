@@ -26,6 +26,7 @@ var (
 	blackList = "blacklist:"
 	refreshHeader = "X-Refresh"
 	accessHeader = "Authorization"
+	accessStatus = "Access-Status"
 )
 
 func JwtErrorHandler(ctx fiber.Ctx,err error) error{
@@ -34,8 +35,8 @@ func JwtErrorHandler(ctx fiber.Ctx,err error) error{
 		return exceptions.ErrInvalidToken
 	}
 	if errors.Is(err,jwt.ErrTokenExpired){
-		zaplog.Zap.Error(fmt.Sprintf("Token Expired Error:%v",err))
-		return exceptions.ErrTokenExpired
+		ctx.Set(accessStatus,"true")
+		return ctx.SendStatus(fiber.StatusOK)
 	}
 	zaplog.Zap.Error(fmt.Sprintf("Token Error:%v",err))
 	return exceptions.ErrInternalServerError

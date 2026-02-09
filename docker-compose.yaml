@@ -1,15 +1,4 @@
 services:
-  postgres:
-    image: postgres:latest
-    container_name: postgresql
-    ports:
-      - "5432:5432"
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: 123456
-    volumes:
-      - "$HOME/data/postgres:/var/lib/postgresql"
-
   redis:
     image: redis:latest
     container_name: redis
@@ -43,40 +32,70 @@ services:
       - $HOME/data/rustfs:/data
       # 日志目录
       - $HOME/data/logs/rustfs:/app/logs
-  geoserver:
-    image: docker.osgeo.org/geoserver:2.28.2
-    container_name: geoserver
-    ports:
-      - "8082:8080"
-    environment:
-      # 管理员账户设置
-      - GEOSERVER_ADMIN_USER=admin
-      - GEOSERVER_ADMIN_PASSWORD=1234567890
-      
-      # 安装扩展插件（逗号分隔，无空格）
-      - INSTALL_EXTENSIONS=true
-      - STABLE_EXTENSIONS=vectortiles,wps,csw,ysld
-      
-      # JVM 优化参数（根据服务器内存调整）
-      - JAVA_OPTS=-server -Xms4g -Xmx4g -XX:+UseG1GC -XX:MaxGCPauseMillis=200
-      
-      # 数据目录路径（容器内固定路径）
-      - GEOSERVER_DATA_DIR=/opt/geoserver_data
-      
+
+  geo-data:
+    image: kartoza/postgis
+    container_name: geo-data
     volumes:
-      # 数据目录挂载（本地路径:容器路径）
-      - $HOME/data/geoserver/data:/opt/geoserver_data
-      
-      # 可选：挂载额外的字体目录（用于地图标注中文显示）
-      - $HOME/data/geoserver/fonts:/usr/share/fonts/extra:ro
-      
-      # 可选：挂载 GeoServer 日志配置
-      - $HOME/data/geoserver/logs:/opt/geoserver/logs
-      
-    restart: unless-stopped
+      - $HOME/data/postgres:/var/lib/postgresql
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=geo_data,postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=123456
+      - ALLOW_IP_RANGE=0.0.0.0/0
+    restart: on-failure
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/geoserver/index.html"]
-      interval: 30s
+      test: "pg_isready -h 127.0.0.1 -U postgres"
+      interval: 1m30s
       timeout: 10s
       retries: 3
-      start_period: 60s
+      start_period: 1m
+  
+  geoserver:
+    image: kartoza/geoserver
+    container_name: geoserver
+    environment:
+      - SAMPLE_DATA=true
+      - GEOSERVER_DATA_DIR=/opt/geoserver/data_dir
+      - FOOTPRINTS_DATA_DIR=/opt/footprints_dir
+      - FONTS_DIR=/opt/fonts
+      - GEOWEBCACHE_CACHE_DIR=/opt/geoserver/gwc
+      - GEOSERVER_ADMIN_PASSWORD=123456
+      - GEOSERVER_ADMIN_USER=admin
+      - INITIAL_MEMORY=2G
+      - MAXIMUM_MEMORY=4G
+      - ENCODING='UTF8'
+      - LOGIN_STATUS=on
+      - REQUEST_TIMEOUT=60
+      - PARALLEL_REQUEST=100
+      - GETMAP=10
+      - REQUEST_EXCEL=4
+      - SINGLE_USER=6
+      - GWC_REQUEST=16
+      - WPS_REQUEST=1000/d;30s
+      - POSTGRES_JNDI=TRUE 
+      - DB_BACKEND=POSTGRES               
+      - HOST=geo-data                          
+      - POSTGRES_PORT=5432                
+      - POSTGRES_DB=geo_data                   
+      - POSTGRES_USER=postgres  
+      - POSTGRES_PASS=123456                        
+      - POSTGRES_SCHEMA=public           
+      - DISK_QUOTA_SIZE=5
+    ports:
+      - "8082:8080"
+    volumes:
+      - $HOME/data/geoserver/data_dir:/opt/geoserver/data_dir
+      - $HOME/data/geoserver/gwc:/opt/geoserver/gwc
+      - $HOME/data/geoserver/settings:/settings
+    depends_on:
+        geo-data:
+          condition: service_healthy
+    healthcheck:
+      test: [ "CMD-SHELL", "curl --fail --silent --write-out 'HTTP CODE : %{http_code}\n' --output /dev/null -u $${GEOSERVER_ADMIN_USER}:$${GEOSERVER_ADMIN_PASSWORD} http://localhost:8080/geoserver/rest/about/version.xml" ]
+      interval: 1m30s
+      timeout: 10s
+      retries: 3
+      start_period: 1m
