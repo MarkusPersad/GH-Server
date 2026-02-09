@@ -165,7 +165,9 @@ func(s *service) Logout(ctx fiber.Ctx) error{
 			return err
 		}
 		if err := CheckLogin(ctx,accountID); err != nil {
-			return err
+			if !errors.Is(err,exceptions.ErrAccountLogined) {
+				return err	
+			}
 		}
 		if _,err := gorm.G[model.User](tx).Where("uuid = ? ",accountID).Select("status","last_logout_at","version").Updates(ctx,model.User{
 			LastLogoutAt: time.Now(),
@@ -202,26 +204,27 @@ func(s *service)UploadAvatar(ctx fiber.Ctx,email string,avatar string) error {
 
 
 func CheckLogin(ctx fiber.Ctx,uuid string) error {
+	var err error = nil
 	databaseInstance,ok := ctx.App().State().MustGet(STATENAME).(Service)
 	if !ok {
 		zaplog.Zap.Error("Database not initialized")
-		return exceptions.ErrInternalServerError
+		err = exceptions.ErrInternalServerError
 	}
 	cmdBool,err := databaseInstance.GetRedisClient().SIsMember(ctx,fmt.Sprintf("%s%s",blackList,appName),uuid).Result()
 	if err != nil {
 		zaplog.Zap.Error(fmt.Sprintf("Redis SIsMember Error:%v",err))
-		return exceptions.ErrInternalServerError
+		err = exceptions.ErrInternalServerError
 	}
 	if cmdBool {
-		return exceptions.ErrAccountLocked
+		err = exceptions.ErrAccountLocked
 	}
 	cmdInt,err := databaseInstance.GetRedisClient().Exists(ctx,fmt.Sprintf("%s%s",refresh,uuid)).Result()
 	if err != nil {
 		zaplog.Zap.Error(fmt.Sprintf("Redis Exists Error:%v",err))
-		return exceptions.ErrInternalServerError
+		err = exceptions.ErrInternalServerError
 	}
 	if cmdInt != 0 {
-		return exceptions.ErrAccountLogined
+		err = exceptions.ErrAccountLogined
 	}
-	return nil
+	return err
 }
