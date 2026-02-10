@@ -119,7 +119,7 @@ func(s *service) Login(login *request.UserLoginRequest,ctx fiber.Ctx) (*response
 			return err
 		}
 		if err := utils.ComparedWithPassword(user.Password,login.Password);err != nil {
-			return err
+			return exceptions.ErrPasswordIncorrect
 		}
 		if _,err := gorm.G[model.User](tx).Where("email = ? ",login.Email).Select("status","last_login_at","version").Updates(ctx,
 			model.User{

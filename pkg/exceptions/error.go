@@ -56,4 +56,5 @@ var (
 	ErrVerificationCodeExpired = NewException(1012, "验证码已过期")
 	ErrAccountLogined          = NewException(1013, "账户已登录")
 	ErrAccountLocked           = NewException(1014, "账户已锁定")
+	ErrPasswordIncorrect       = NewException(1015, "密码错误")
 )
