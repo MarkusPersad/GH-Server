@@ -75,8 +75,6 @@ func JwtSuccessHandler(ctx fiber.Ctx) error {
 	return ctx.Next()
 }
 
-// ... existing code ...
-
 // RefreshTokenHandler 处理刷新令牌的请求，验证现有刷新令牌并生成新的访问和刷新令牌
 // 该函数执行以下步骤：
 // 1. 从请求头中提取刷新令牌
