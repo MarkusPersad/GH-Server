@@ -322,7 +322,7 @@ func (s *service) GetUserList(ctx fiber.Ctx) (*[]model.User, error) {
 		return tx.Table("user_friend").
 			Select("user.uuid,user.user_name,user.avatar").
 			Joins("JOIN user ON user_friend.friend_id = user.uuid").
-			Where("(user_friend.user_id = ? OR user_friend.friend_id = ?) AND status != 2",accountID,accountID).
+			Where("(user_friend.user_id = ? OR user_friend.friend_id = ?) AND status = 0",accountID,accountID).
 			Scan(userList).Error
 	})
 

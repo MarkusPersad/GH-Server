@@ -42,6 +42,7 @@ var (
 	ErrGatewayTimeout      = NewException(http.StatusGatewayTimeout, "网关超时")
 
 	// 自定义业务错误 (1000+)
+	ErrOperationIllegal       = NewException(1000, "操作非法")
 	ErrUserNotFound            = NewException(1001, "用户不存在")
 	ErrUserAlreadyExists       = NewException(1002, "用户已存在")
 	ErrInvalidCredentials      = NewException(1003, "用户名或密码错误")

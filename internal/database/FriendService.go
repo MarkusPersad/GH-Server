@@ -18,6 +18,8 @@ import (
 type FriendService interface {
 	AddFriend(request *request.AddFriendRequest,ctx fiber.Ctx) error
 	AgreeFriend(request *request.AddFriendRequest,ctx fiber.Ctx) error
+	LockFriend(request *request.AddFriendRequest,ctx fiber.Ctx) error
+	UnlockFriend(request *request.AddFriendRequest,ctx fiber.Ctx) error
 }
 
 func(s *service)AddFriend(request *request.AddFriendRequest,ctx fiber.Ctx) error {
@@ -81,11 +83,75 @@ func(s *service)AgreeFriend(request *request.AddFriendRequest,ctx fiber.Ctx) err
 		}
 
 		if _,err :=  gorm.G[model.UserFriend](tx).Where("user_id = ? AND friend_id = ?",account,faccount).Select("status","version").Updates(ctx,model.UserFriend{
-			Status: 0,
+			Status: "0",
 		});err != nil {
 			zaplog.Zap.Error(fmt.Sprintf("Update user_friend failed: %v", err))
 			return err
 		}
 		return nil
 	}) 
+}
+
+func(s *service)LockFriend(request *request.AddFriendRequest,ctx fiber.Ctx) error {
+	accountID,err := jwtware.FromContext(ctx).Claims.GetSubject()
+	if err != nil {
+		zaplog.Zap.Error(fmt.Sprintf("Get accountID failed: %v", err))
+		return err
+	}
+	if err := CheckLogin(ctx, accountID); err != nil {
+		return  err
+	}
+	return s.gdb.Transaction(func(tx *gorm.DB) error {
+		account,faccount := utils.StringSwitch(accountID,request.UserId)
+		friendShip,err := gorm.G[model.UserFriend](tx).Where("user_id = ? AND friend_id = ?",account,faccount).First(ctx)
+		if err != nil {
+			if errors.Is(err,gorm.ErrRecordNotFound) {
+				return exceptions.ErrNotFound
+			}
+			zaplog.Zap.Error(fmt.Sprintf("select user_friend failed: %v", err))
+			return err
+		}
+		if friendShip.Status != "0" {
+			return exceptions.ErrOperationIllegal
+		}
+		if _,err := gorm.G[model.UserFriend](tx).Where("user_id = ? AND friend_id = ?",account,faccount).Select("status","version").Updates(ctx,model.UserFriend{
+			Status: accountID,
+		});err != nil {
+			zaplog.Zap.Error(fmt.Sprintf("Update user_friend failed: %v", err))
+			return err
+		}
+		return nil
+	})
+}
+
+func(s *service)UnlockFriend(request *request.AddFriendRequest,ctx fiber.Ctx) error {
+	accountID,err := jwtware.FromContext(ctx).Claims.GetSubject()
+	if err != nil {
+		zaplog.Zap.Error(fmt.Sprintf("Get accountID failed: %v", err))
+		return err
+	}
+	if err := CheckLogin(ctx, accountID); err != nil {
+		return  err
+	}
+	return s.gdb.Transaction(func(tx *gorm.DB) error {
+		account,faccount := utils.StringSwitch(accountID,request.UserId)
+		friendShip,err := gorm.G[model.UserFriend](tx).Where("user_id = ? AND friend_id = ?",account,faccount).First(ctx)
+		if err != nil {
+			if errors.Is(err,gorm.ErrRecordNotFound) {
+				return exceptions.ErrNotFound
+			}
+			zaplog.Zap.Error(fmt.Sprintf("select user_friend failed: %v", err))
+			return err
+		}
+		if friendShip.Status != accountID {
+			return exceptions.ErrOperationIllegal
+		}
+		if _,err := gorm.G[model.UserFriend](tx).Where("user_id = ? AND friend_id = ?",account,faccount).Select("status","version").Updates(ctx,model.UserFriend{
+			Status: "0",
+		});err != nil {
+			zaplog.Zap.Error(fmt.Sprintf("Update user_friend failed: %v", err))
+			return err
+		}
+		return nil
+	})
 }
