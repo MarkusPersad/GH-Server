@@ -42,6 +42,7 @@ type UserService interface {
 	Logout(ctx fiber.Ctx) error
 	UploadAvatar(ctx fiber.Ctx,email string,avatar string) error
 	GetUserDetails(ctx fiber.Ctx,searchinfo string) (*response.UserInfoResponse,error)
+	Search(ctx fiber.Ctx,searchinfo string) (*response.SearchResponse,error)
 }
 
 // Register 创建新用户并将其信息存储到数据库中
@@ -251,6 +252,44 @@ func (s *service) GetUserDetails(ctx fiber.Ctx,searchinfo string) (*response.Use
 	return userInfo,err
 }
 
+func (s *service) Search(ctx fiber.Ctx,searchinfo string) (*response.SearchResponse,error) {
+	accountID,err := jwtware.FromContext(ctx).Claims.GetSubject()
+	if err != nil {
+		zaplog.Zap.Error(fmt.Sprintf("Get accountID failed: %v", err))
+		return nil,err
+	}
+	if err := CheckLogin(ctx,accountID); err != nil {
+			if !errors.Is(err,exceptions.ErrAccountLogined) {
+				return nil,err	
+			}
+		}
+	user := new(model.User)
+	group := new(model.Group)
+	
+	err  = s.gdb.Transaction(func(tx *gorm.DB) error {
+		usr,err := gorm.G[model.User](tx).Select("uuid","avatar","user_name","email","role").Where("user_name = ? OR email = ?",searchinfo,searchinfo).First(ctx)
+		 if   err != nil  && ! errors.Is(err,gorm.ErrRecordNotFound){
+			zaplog.Zap.Error(fmt.Sprintf("select user failed: %v", err))
+			return err
+		 }
+		 if err == nil {
+			user = &usr
+		 }
+		 grop,err := gorm.G[model.Group](tx).Select("name","uuid").Where("name = ?",searchinfo).First(ctx)
+		 if err != nil && !errors.Is(err,gorm.ErrRecordNotFound) {
+			zaplog.Zap.Error(fmt.Sprintf("select group failed: %v", err))
+			return err
+		 }
+		 if err == nil {
+			 group = &grop
+		 }
+		 return nil
+	})
+	searchResponse := new(response.SearchResponse)
+	searchResponse.User = *user
+	searchResponse.Group = *group
+	return searchResponse,err
+}
 
 func CheckLogin(ctx fiber.Ctx,uuid string) error {
 	var err error = nil

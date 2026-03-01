@@ -91,7 +91,7 @@ func New() Service {
 	}
 	instance = &service{gdb: db, rdb: rdb}
 
-	if err := db.AutoMigrate(&model.User{}); err != nil {
+	if err := db.AutoMigrate(&model.User{},&model.Group{},&model.Message{},&model.UserFriend{},&model.GroupMember{}); err != nil {
 		zaplog.Zap.Error(fmt.Sprintf("failed to migrate database: %v", err))
 	}
 	

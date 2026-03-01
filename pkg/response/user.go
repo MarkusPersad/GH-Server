@@ -1,6 +1,10 @@
 package response
 
-import "github.com/google/uuid"
+import (
+	"GH-Server/internal/model"
+
+	"github.com/google/uuid"
+)
 
 
 type UserInfoResponse struct {
@@ -9,4 +13,9 @@ type UserInfoResponse struct {
 	Email string `json:"email"`
 	Avatar string `json:"avatar"`
 	Role string `json:"role"`
+}
+
+type SearchResponse struct {
+	 User      model.User `json:"user"`
+	Group  model.Group `json:"group"`
 }

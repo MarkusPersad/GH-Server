@@ -80,6 +80,7 @@ func (server *FiberServer) RegisterRoutes() {
 	userRoute.Get("/logout", handler.UserLogout)
 	userRoute.Post("/uploadAvatar",handler.UserUploadAvatar)
 	userRoute.Get("/details", handler.GetUserDetails)
+	userRoute.Get("/search", handler.Search)
 }
 
 func (server *FiberServer) healthHandler(ctx fiber.Ctx) error {
