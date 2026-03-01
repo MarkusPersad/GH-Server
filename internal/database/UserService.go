@@ -44,6 +44,7 @@ type UserService interface {
 	GetUserDetails(ctx fiber.Ctx,searchinfo string) (*response.UserInfoResponse,error)
 	Search(ctx fiber.Ctx,searchinfo string) (*response.SearchResponse,error)
 	GetUserList(ctx fiber.Ctx) (*[]model.User, error)
+	AddFriend(request *request.AddFriendRequest,ctx fiber.Ctx) error
 }
 
 // Register 创建新用户并将其信息存储到数据库中
@@ -177,9 +178,7 @@ func(s *service) Logout(ctx fiber.Ctx) error{
 			return err
 		}
 		if err := CheckLogin(ctx,accountID); err != nil {
-			if !errors.Is(err,exceptions.ErrAccountLogined) {
-				return err	
-			}
+			return nil
 		}
 		if _,err := gorm.G[model.User](tx).Where("uuid = ? ",accountID).Select("status","last_logout_at","version").Updates(ctx,model.User{
 			LastLogoutAt: time.Now(),
@@ -222,9 +221,7 @@ func (s *service) GetUserDetails(ctx fiber.Ctx,searchinfo string) (*response.Use
 		return nil,err
 	}
 	if err := CheckLogin(ctx,accountID); err != nil {
-			if !errors.Is(err,exceptions.ErrAccountLogined) {
-				return nil,err	
-			}
+			return nil,err
 		}
 	userInfo := new(response.UserInfoResponse)
 	err = s.gdb.Transaction(func(tx *gorm.DB) error {
@@ -260,9 +257,7 @@ func (s *service) Search(ctx fiber.Ctx,searchinfo string) (*response.SearchRespo
 		return nil,err
 	}
 	if err := CheckLogin(ctx,accountID); err != nil {
-			if !errors.Is(err,exceptions.ErrAccountLogined) {
-				return nil,err	
-			}
+			return nil,err
 		}
 	user := new(model.User)
 	group := new(model.Group)
@@ -315,9 +310,7 @@ func (s *service) GetUserList(ctx fiber.Ctx) (*[]model.User, error) {
 
 	// 检查账户是否已登录
 	if err := CheckLogin(ctx, accountID); err != nil {
-		if !errors.Is(err, exceptions.ErrAccountLogined) {
-			return nil, err
-		}
+		return nil, err
 	}
 
 	// 初始化用户列表
@@ -325,10 +318,11 @@ func (s *service) GetUserList(ctx fiber.Ctx) (*[]model.User, error) {
 
 	// 执行数据库事务以获取用户好友
 	err = s.gdb.Transaction(func(tx *gorm.DB) error {
+		
 		return tx.Table("user_friend").
 			Select("user.uuid,user.user_name,user.avatar").
 			Joins("JOIN user ON user_friend.friend_id = user.uuid").
-			Where("user_friends.user_id = ?", accountID).
+			Where("(user_friend.user_id = ? OR user_friend.friend_id = ?) AND status != 2",accountID,accountID).
 			Scan(userList).Error
 	})
 
@@ -360,4 +354,45 @@ func CheckLogin(ctx fiber.Ctx,uuid string) error {
 		err = exceptions.ErrAccountLogined
 	}
 	return err
+}
+
+func(s *service)AddFriend(request *request.AddFriendRequest,ctx fiber.Ctx) error {
+	accountID,err := jwtware.FromContext(ctx).Claims.GetSubject()
+	if err != nil {
+		zaplog.Zap.Error(fmt.Sprintf("Get accountID failed: %v", err))
+		return err
+	}
+	if err := CheckLogin(ctx, accountID); err != nil {
+		return  err
+	}
+	return s.gdb.Transaction(func(tx *gorm.DB) error {
+		userId,err := uuid.Parse(request.UserId)
+		if err != nil {
+			zaplog.Zap.Error(fmt.Sprintf("Parse userId failed: %v", err))
+			return err
+		}
+
+		if _,err := gorm.G[model.User](tx).Where("uuid = ?",userId).First(ctx);err != nil {
+			if errors.Is(err,gorm.ErrRecordNotFound) {
+				return exceptions.ErrNotFound
+			}
+			zaplog.Zap.Error(fmt.Sprintf("select user failed: %v", err))
+			return err
+		}
+
+		account,faccount:= utils.StringSwitch(accountID,request.UserId)
+	
+		if _,err := gorm.G[model.UserFriend](tx).Where("user_id = ? AND friend_id = ?",account,faccount).First(ctx);err != nil {
+			if !errors.Is(err,gorm.ErrRecordNotFound) {
+				zaplog.Zap.Error(fmt.Sprintf("select user_friend failed: %v", err))
+				return err
+			}
+		} else {
+			return exceptions.ErrFriendAlreadyExists
+		}
+		return  gorm.G[model.UserFriend](tx).Create(ctx,&model.UserFriend{
+			UserID: account,
+			FriendID: faccount,
+		})
+	})
 }

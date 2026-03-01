@@ -122,3 +122,18 @@ func GetUserList(ctx fiber.Ctx) error{
 	}
 	return ctx.Status(http.StatusOK).JSON(response.Success("获取用户列表成功", userList))
 }
+
+func AddFriend(ctx fiber.Ctx) error {
+	addFriend := new(request.AddFriendRequest)
+	if err := ctx.Bind().Body(addFriend); err != nil {
+		zaplog.Zap.Error(fmt.Sprintf("bind body failed: %v", err))
+		return exceptions.ErrBadRequest
+	}
+	if err := ctx.App().State().MustGet(utils.ValidatorSTATENAME).(*utils.StructValidator).Validate(addFriend); err != nil {
+		return exceptions.ErrInvalidParameters
+	}
+	if err := ctx.App().State().MustGet(database.STATENAME).(database.Service).AddFriend(addFriend, ctx); err != nil {
+		return err
+	}
+	return ctx.Status(http.StatusOK).JSON(response.Success("发送好友请求成功", nil))
+}
