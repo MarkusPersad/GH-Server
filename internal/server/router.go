@@ -81,6 +81,7 @@ func (server *FiberServer) RegisterRoutes() {
 	userRoute.Post("/uploadAvatar",handler.UserUploadAvatar)
 	userRoute.Get("/details", handler.GetUserDetails)
 	userRoute.Get("/search", handler.Search)
+	userRoute.Get("/list", handler.GetUserList)
 }
 
 func (server *FiberServer) healthHandler(ctx fiber.Ctx) error {

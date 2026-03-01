@@ -43,6 +43,7 @@ type UserService interface {
 	UploadAvatar(ctx fiber.Ctx,email string,avatar string) error
 	GetUserDetails(ctx fiber.Ctx,searchinfo string) (*response.UserInfoResponse,error)
 	Search(ctx fiber.Ctx,searchinfo string) (*response.SearchResponse,error)
+	GetUserList(ctx fiber.Ctx) (*[]model.User, error)
 }
 
 // Register 创建新用户并将其信息存储到数据库中
@@ -289,6 +290,50 @@ func (s *service) Search(ctx fiber.Ctx,searchinfo string) (*response.SearchRespo
 	searchResponse.User = *user
 	searchResponse.Group = *group
 	return searchResponse,err
+}
+
+// GetUserList 获取当前账户关联的用户列表
+// 首先从上下文中的JWT令牌提取账户ID
+// 然后检查账户是否已登录
+// 如果账户未登录且错误不是ErrAccountLogined，则返回错误
+// 否则，查询数据库获取账户的好友列表
+// 函数使用事务确保查询期间的数据一致性
+//
+// 参数:
+//   - ctx: 包含请求信息和JWT令牌的Fiber上下文
+//
+// 返回值:
+//   - *[]model.User: 指向用户模型切片的指针，表示用户列表
+//   - error: 如果任何步骤失败则返回错误，否则返回nil
+func (s *service) GetUserList(ctx fiber.Ctx) (*[]model.User, error) {
+	// 从上下文中的JWT令牌提取账户ID
+	accountID, err := jwtware.FromContext(ctx).Claims.GetSubject()
+	if err != nil {
+		zaplog.Zap.Error(fmt.Sprintf("获取账户ID失败: %v", err))
+		return nil, err
+	}
+
+	// 检查账户是否已登录
+	if err := CheckLogin(ctx, accountID); err != nil {
+		if !errors.Is(err, exceptions.ErrAccountLogined) {
+			return nil, err
+		}
+	}
+
+	// 初始化用户列表
+	userList := new([]model.User)
+
+	// 执行数据库事务以获取用户好友
+	err = s.gdb.Transaction(func(tx *gorm.DB) error {
+		return tx.Table("user_friend").
+			Select("user.uuid,user.user_name,user.avatar").
+			Joins("JOIN user ON user_friend.friend_id = user.uuid").
+			Where("user_friends.user_id = ?", accountID).
+			Scan(userList).Error
+	})
+
+	// 返回用户列表和遇到的任何错误
+	return userList, err
 }
 
 func CheckLogin(ctx fiber.Ctx,uuid string) error {

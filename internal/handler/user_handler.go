@@ -114,3 +114,11 @@ func Search(ctx fiber.Ctx) error {
 	}
 	return ctx.Status(http.StatusOK).JSON(response.Success("搜索成功", userInfo))
 }
+
+func GetUserList(ctx fiber.Ctx) error{
+	userList, err := ctx.App().State().MustGet(database.STATENAME).(database.Service).GetUserList(ctx)
+	if err != nil {
+		return err
+	}
+	return ctx.Status(http.StatusOK).JSON(response.Success("获取用户列表成功", userList))
+}
