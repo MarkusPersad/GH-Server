@@ -44,7 +44,7 @@ type UserService interface {
 	GetUserDetails(ctx fiber.Ctx,searchinfo string) (*response.UserInfoResponse,error)
 	Search(ctx fiber.Ctx,searchinfo string) (*response.SearchResponse,error)
 	GetUserList(ctx fiber.Ctx) (*[]model.User, error)
-	AddFriend(request *request.AddFriendRequest,ctx fiber.Ctx) error
+	
 }
 
 // Register 创建新用户并将其信息存储到数据库中
@@ -354,45 +354,4 @@ func CheckLogin(ctx fiber.Ctx,uuid string) error {
 		err = exceptions.ErrAccountLogined
 	}
 	return err
-}
-
-func(s *service)AddFriend(request *request.AddFriendRequest,ctx fiber.Ctx) error {
-	accountID,err := jwtware.FromContext(ctx).Claims.GetSubject()
-	if err != nil {
-		zaplog.Zap.Error(fmt.Sprintf("Get accountID failed: %v", err))
-		return err
-	}
-	if err := CheckLogin(ctx, accountID); err != nil {
-		return  err
-	}
-	return s.gdb.Transaction(func(tx *gorm.DB) error {
-		userId,err := uuid.Parse(request.UserId)
-		if err != nil {
-			zaplog.Zap.Error(fmt.Sprintf("Parse userId failed: %v", err))
-			return err
-		}
-
-		if _,err := gorm.G[model.User](tx).Where("uuid = ?",userId).First(ctx);err != nil {
-			if errors.Is(err,gorm.ErrRecordNotFound) {
-				return exceptions.ErrNotFound
-			}
-			zaplog.Zap.Error(fmt.Sprintf("select user failed: %v", err))
-			return err
-		}
-
-		account,faccount:= utils.StringSwitch(accountID,request.UserId)
-	
-		if _,err := gorm.G[model.UserFriend](tx).Where("user_id = ? AND friend_id = ?",account,faccount).First(ctx);err != nil {
-			if !errors.Is(err,gorm.ErrRecordNotFound) {
-				zaplog.Zap.Error(fmt.Sprintf("select user_friend failed: %v", err))
-				return err
-			}
-		} else {
-			return exceptions.ErrFriendAlreadyExists
-		}
-		return  gorm.G[model.UserFriend](tx).Create(ctx,&model.UserFriend{
-			UserID: account,
-			FriendID: faccount,
-		})
-	})
 }

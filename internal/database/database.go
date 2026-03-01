@@ -52,6 +52,7 @@ type service struct {
 type Service interface {
 	Health() map[string]string
 	UserService
+	FriendService
 	GetRedisClient() *redis.Client
 }
 
