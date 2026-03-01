@@ -90,3 +90,15 @@ func  UserUploadAvatar(ctx fiber.Ctx) error {
 
 	return ctx.Status(http.StatusOK).JSON(response.Success("上传成功", nil))
 }
+
+func GetUserDetails(ctx fiber.Ctx) error {
+	searchinfo := ctx.Query("searchinfo")
+	if searchinfo == "" {
+		return exceptions.ErrBadRequest
+	}
+	userInfo, err := ctx.App().State().MustGet(database.STATENAME).(database.Service).GetUserDetails(ctx, searchinfo)
+	if err != nil {
+		return err
+	}
+	return ctx.Status(http.StatusOK).JSON(response.Success("获取用户信息成功", userInfo))
+}

@@ -41,6 +41,7 @@ type UserService interface {
 	Login(login *request.UserLoginRequest,ctx fiber.Ctx) (*response.UserInfoResponse,error)
 	Logout(ctx fiber.Ctx) error
 	UploadAvatar(ctx fiber.Ctx,email string,avatar string) error
+	GetUserDetails(ctx fiber.Ctx,searchinfo string) (*response.UserInfoResponse,error)
 }
 
 // Register 创建新用户并将其信息存储到数据库中
@@ -87,11 +88,20 @@ func (s *service) Register(register *request.UserRegisterRequest, ctx fiber.Ctx)
 }
 
 func (s *service) SendVerifyCode(emailVerify *request.UserMailVerifyRequest, ctx fiber.Ctx) error {
+	verifiedKey := fmt.Sprintf("%s%s", verifyCodePrefix, emailVerify.Email)
+	if existsCount,err := s.rdb.Exists(ctx,verifiedKey).Result(); err == nil {
+		if existsCount >0 {
+			return  exceptions.ErrVerificationCodeSent
+		}
+	} else {
+		zaplog.Zap.Error(fmt.Sprintf("redis exists failed: %v", err))
+		return err
+	}
 	code := rand.Intn(900000) + 100000
 	if err := utils.VerifyMailSend(emailVerify.Email, emailVerify.UserName, strconv.Itoa(code)); err != nil {
 		return err
 	}
-	if err := s.rdb.SetNX(ctx, fmt.Sprintf("%s%s", verifyCodePrefix, emailVerify.Email), code, 5*time.Minute).Err(); err != nil {
+	if err := s.rdb.Set(ctx,verifiedKey , code, 5*time.Minute).Err(); err != nil {
 		zaplog.Zap.Error(fmt.Sprintf("set redis failed: %v", err))
 		return err
 	}
@@ -200,6 +210,45 @@ func(s *service)UploadAvatar(ctx fiber.Ctx,email string,avatar string) error {
 		}
 		return nil
 	})
+}
+
+
+func (s *service) GetUserDetails(ctx fiber.Ctx,searchinfo string) (*response.UserInfoResponse,error) {
+	accountID,err := jwtware.FromContext(ctx).Claims.GetSubject()
+	if err != nil {
+		zaplog.Zap.Error(fmt.Sprintf("Get accountID failed: %v", err))
+		return nil,err
+	}
+	if err := CheckLogin(ctx,accountID); err != nil {
+			if !errors.Is(err,exceptions.ErrAccountLogined) {
+				return nil,err	
+			}
+		}
+	userInfo := new(response.UserInfoResponse)
+	err = s.gdb.Transaction(func(tx *gorm.DB) error {
+		user := new(model.User)
+
+		pattern := fmt.Sprintf("%%%s%%", searchinfo)
+		if usr,err := gorm.G[model.User](tx).
+			Where("email LIKE ? OR user_name LIKE ?", pattern, pattern).
+			First(ctx);err != nil {
+			if errors.Is(err,gorm.ErrRecordNotFound) {
+				zaplog.Zap.Error(fmt.Sprintf("record not found: %v", err))
+				return exceptions.ErrUserNotFound
+			}
+			zaplog.Zap.Error(fmt.Sprintf("select user failed: %v", err))
+			return err
+		} else {
+			user = &usr 
+		}
+		userInfo.UUID = user.UUID
+		userInfo.UserName = user.UserName
+		userInfo.Avatar = user.Avatar
+		userInfo.Email = user.Email
+		userInfo.Role = user.Role
+		return nil
+	})
+	return userInfo,err
 }
 
 
