@@ -91,6 +91,7 @@ func (server *FiberServer) RegisterRoutes() {
 	groupRoute := server.App.Group("/group")
 	groupRoute.Get("/list",handler.GetGroups)
 	groupRoute.Post("/create",handler.CreateGroup)
+	groupRoute.Get("/details/:searchinfo",handler.GetGroupDetails)
 }
 
 func (server *FiberServer) healthHandler(ctx fiber.Ctx) error {

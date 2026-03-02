@@ -35,3 +35,12 @@ func CreateGroup(ctx fiber.Ctx) error {
 	}
 	return ctx.Status(http.StatusOK).JSON(response.Success("创建群组成功", nil))
 }
+
+func GetGroupDetails(ctx fiber.Ctx) error {
+	searchInfo := ctx.Params("searchinfo")
+	group, err := ctx.App().State().MustGet(database.STATENAME).(database.Service).GetGroupDetails(ctx, searchInfo)
+	if err != nil {
+		return err
+	}
+	return ctx.Status(http.StatusOK).JSON(response.Success("获取群组详情成功", group))
+}

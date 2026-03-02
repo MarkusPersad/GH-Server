@@ -16,7 +16,8 @@ import (
 
 type GroupService interface {
 	GetGroups(ctx fiber.Ctx) (*[]model.Group, error)
-	CreateGroup(request *request.GroupCreateRequest,ctx fiber.Ctx) error 
+	CreateGroup(request *request.GroupCreateRequest,ctx fiber.Ctx) error
+	GetGroupDetails(ctx fiber.Ctx, searchInfo string) (*model.Group, error) 
 }
 
 func(s *service)GetGroups(ctx fiber.Ctx) (*[]model.Group, error){
@@ -85,4 +86,58 @@ func(s *service)CreateGroup(request *request.GroupCreateRequest,ctx fiber.Ctx) e
 		}
 		return nil
 	}) 
+}
+
+// GetGroupDetails retrieves the details of a group based on the provided search information.
+// It first extracts the account ID from the JWT token in the context and validates the login status.
+// Then, it performs a database transaction to fetch the group details using either the UUID or name.
+// If the group is not found, it returns a "not found" error.
+//
+// Parameters:
+//   - ctx: The Fiber context containing the request information and JWT claims.
+//   - searchInfo: A string used to search for the group by either UUID or name.
+//
+// Returns:
+//   - *model.Group: A pointer to the Group model containing the retrieved group details.
+//   - error: An error if any step fails, including authentication, database query, or transaction issues.
+func (s *service) GetGroupDetails(ctx fiber.Ctx, searchInfo string) (*model.Group, error) {
+	// Extract the account ID from the JWT token in the context.
+	accountID, err := jwtware.FromContext(ctx).Claims.GetSubject()
+	if err != nil {
+		zaplog.Zap.Error(fmt.Sprintf("Get accountID failed: %v", err))
+		return nil, err
+	}
+
+	// Validate the login status of the user.
+	if err := CheckLogin(ctx, accountID); err != nil {
+		return nil, err
+	}
+
+	// Initialize a new Group model to store the retrieved details.
+	group := new(model.Group)
+
+	// Perform a database transaction to fetch the group details.
+	err = s.gdb.Transaction(func(tx *gorm.DB) error {
+		// Query the group by UUID or name.
+		if groupDetails, err := gorm.G[model.Group](tx).Where("uuid = ? OR name = ?", searchInfo, searchInfo).First(ctx); err != nil {
+			// Handle the case where the group is not found.
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return exceptions.ErrNotFound
+			}
+			// Log and return other database errors.
+			zaplog.Zap.Error(fmt.Sprintf("select group failed: %v", err))
+			return err
+		} else {
+			// Populate the group model with the retrieved details.
+			group.UUID = groupDetails.UUID
+			group.Name = groupDetails.Name
+			group.Notice = groupDetails.Notice
+			group.OwnerID = groupDetails.OwnerID
+			group.CreatedAt = groupDetails.CreatedAt
+		}
+		return nil
+	})
+
+	// Return the populated group model and any error encountered.
+	return group, err
 }
