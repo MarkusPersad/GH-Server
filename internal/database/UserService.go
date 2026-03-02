@@ -227,9 +227,8 @@ func (s *service) GetUserDetails(ctx fiber.Ctx,searchinfo string) (*response.Use
 	err = s.gdb.Transaction(func(tx *gorm.DB) error {
 		user := new(model.User)
 
-		pattern := fmt.Sprintf("%%%s%%", searchinfo)
 		if usr,err := gorm.G[model.User](tx).
-			Where("email LIKE ? OR user_name LIKE ?", pattern, pattern).
+			Where("email = ? OR user_name = ?", searchinfo, searchinfo).
 			First(ctx);err != nil {
 			if errors.Is(err,gorm.ErrRecordNotFound) {
 				zaplog.Zap.Error(fmt.Sprintf("record not found: %v", err))
@@ -250,41 +249,60 @@ func (s *service) GetUserDetails(ctx fiber.Ctx,searchinfo string) (*response.Use
 	return userInfo,err
 }
 
-func (s *service) Search(ctx fiber.Ctx,searchinfo string) (*response.SearchResponse,error) {
-	accountID,err := jwtware.FromContext(ctx).Claims.GetSubject()
+func (s *service) Search(ctx fiber.Ctx, searchinfo string) (*response.SearchResponse, error) {
+	// 提取账户ID并验证登录状态
+	accountID, err := jwtware.FromContext(ctx).Claims.GetSubject()
 	if err != nil {
 		zaplog.Zap.Error(fmt.Sprintf("Get accountID failed: %v", err))
-		return nil,err
+		return nil, err
 	}
-	if err := CheckLogin(ctx,accountID); err != nil {
-			return nil,err
-		}
-	user := new(model.User)
-	group := new(model.Group)
-	
-	err  = s.gdb.Transaction(func(tx *gorm.DB) error {
-		usr,err := gorm.G[model.User](tx).Select("uuid","avatar","user_name","email","role").Where("user_name = ? OR email = ?",searchinfo,searchinfo).First(ctx)
-		 if   err != nil  && ! errors.Is(err,gorm.ErrRecordNotFound){
+	if err := CheckLogin(ctx, accountID); err != nil {
+		return nil, err
+	}
+
+	// 初始化结果容器
+	user := new([]model.User)
+	group := new([]model.Group)
+
+	// 构造模糊搜索模式
+	pattern := fmt.Sprintf("%%%s%%", searchinfo)
+
+	// 执行数据库事务
+	err = s.gdb.Transaction(func(tx *gorm.DB) error {
+		// 模糊搜索用户
+		users, err := gorm.G[model.User](tx).
+			Select("uuid", "avatar", "user_name", "email", "role").
+			Where("user_name LIKE ? OR email LIKE ?", pattern, pattern).
+			Find(ctx)
+		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 			zaplog.Zap.Error(fmt.Sprintf("select user failed: %v", err))
 			return err
-		 }
-		 if err == nil {
-			user = &usr
-		 }
-		 grop,err := gorm.G[model.Group](tx).Select("name","uuid").Where("name = ?",searchinfo).First(ctx)
-		 if err != nil && !errors.Is(err,gorm.ErrRecordNotFound) {
+		}
+		if err == nil {
+			user = &users
+		}
+
+		// 模糊搜索群组
+		groups, err := gorm.G[model.Group](tx).
+			Select("name", "uuid").
+			Where("name LIKE ?", pattern).
+			Find(ctx)
+		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 			zaplog.Zap.Error(fmt.Sprintf("select group failed: %v", err))
 			return err
-		 }
-		 if err == nil {
-			 group = &grop
-		 }
-		 return nil
+		}
+		if err == nil {
+			group = &groups
+		}
+
+		return nil
 	})
+
+	// 构造响应结果
 	searchResponse := new(response.SearchResponse)
 	searchResponse.User = *user
 	searchResponse.Group = *group
-	return searchResponse,err
+	return searchResponse, err
 }
 
 // GetUserList 获取当前账户关联的用户列表

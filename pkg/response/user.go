@@ -14,6 +14,6 @@ type UserInfoResponse struct {
 }
 
 type SearchResponse struct {
-	 User      model.User `json:"user"`
-	Group  model.Group `json:"group"`
+	 User      []model.User `json:"user"`
+	Group  []model.Group `json:"group"`
 }
