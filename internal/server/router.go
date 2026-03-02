@@ -87,6 +87,9 @@ func (server *FiberServer) RegisterRoutes() {
 	friendRoute.Post("/agree", handler.AgreeFriend)
 	friendRoute.Post("/lock", handler.LockFriend)
 	friendRoute.Post("/unlock", handler.UnlockFriend)
+
+	groupRoute := server.App.Group("/group")
+	groupRoute.Get("/list",handler.GetGroups)
 }
 
 func (server *FiberServer) healthHandler(ctx fiber.Ctx) error {

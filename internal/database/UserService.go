@@ -78,7 +78,7 @@ func (s *service) Register(register *request.UserRegisterRequest, ctx fiber.Ctx)
 		return err
 	}
 	if err := gorm.G[model.User](tx).Create(ctx,&model.User{
-		UUID: userUUID,
+		UUID: userUUID.String(),
 		UserName: register.UserName,
 		Email: register.Email,
 		Password: hashedPassword,
@@ -128,7 +128,7 @@ func(s *service) Login(login *request.UserLoginRequest,ctx fiber.Ctx) (*response
 		if user.Status == 1  {
 			return exceptions.ErrAccountLogined
 		}
-		if err := CheckLogin(ctx,user.UUID.String()); err != nil {
+		if err := CheckLogin(ctx,user.UUID); err != nil {
 			return err
 		}
 		if err := utils.ComparedWithPassword(user.Password,login.Password);err != nil {
@@ -143,13 +143,13 @@ func(s *service) Login(login *request.UserLoginRequest,ctx fiber.Ctx) (*response
 			zaplog.Zap.Error(fmt.Sprintf("Update user failed: %v", err))
 			return err
 		}
-		if token,err := utils.CreateAccessToken(user.UUID.String()); err != nil {
+		if token,err := utils.CreateAccessToken(user.UUID); err != nil {
 			zaplog.Zap.Error(fmt.Sprintf("Token String Generated Failed:%v",err))
 			return err
 		} else {
 			ctx.Set(accessHeader,token)
 		}
-		if token,err := utils.CreateRefreshToken(ctx,s.rdb,user.UUID.String(),user.Role); err != nil {
+		if token,err := utils.CreateRefreshToken(ctx,s.rdb,user.UUID,user.Role); err != nil {
 			return err
 		} else {
 			ctx.Set(refreshHeader,token)

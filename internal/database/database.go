@@ -53,6 +53,7 @@ type Service interface {
 	Health() map[string]string
 	UserService
 	FriendService
+	GroupService
 	GetRedisClient() *redis.Client
 }
 

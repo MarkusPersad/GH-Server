@@ -2,13 +2,11 @@ package response
 
 import (
 	"GH-Server/internal/model"
-
-	"github.com/google/uuid"
 )
 
 
 type UserInfoResponse struct {
-	UUID uuid.UUID`json:"uuid"`
+	UUID string`json:"uuid"`
 	UserName string `json:"userName"`
 	Email string `json:"email"`
 	Avatar string `json:"avatar"`

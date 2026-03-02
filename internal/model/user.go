@@ -3,14 +3,13 @@ package model
 import (
 	"time"
 
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 	"gorm.io/plugin/optimisticlock"
 )
 
 type User struct {
 	// 使用UUID作为主键，存储为binary(16)格式以提高性能
-	UUID uuid.UUID `gorm:"type:uuid;primaryKey;" json:"uuid,omitempty"`
+	UUID string `gorm:"primaryKey;" json:"uuid,omitempty"`
 
 	// 用户邮箱，唯一索引，不能为空
 	Email string `gorm:"type:varchar(255);uniqueIndex;not null" json:"email,omitempty"`
