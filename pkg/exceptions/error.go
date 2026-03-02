@@ -60,4 +60,5 @@ var (
 	ErrAccountLocked           = NewException(1015, "账户已锁定")
 	ErrPasswordIncorrect       = NewException(1016, "密码错误")
 	ErrFriendAlreadyExists     = NewException(1017, "好友已存在")
+	ErrGroupAlreadyExists      = NewException(1018, "群组已存在")
 )

@@ -3,14 +3,13 @@ package model
 import (
 	"time"
 
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 	"gorm.io/plugin/optimisticlock"
 )
 
 type Group struct {
-	UUID uuid.UUID `gorm:"type:uuid;primaryKey;" json:"uuid,omitempty"`
-	OwnerID uuid.UUID `gorm:"type:uuid;not null" json:"owner_id"`
+	UUID string `gorm:"primaryKey;" json:"uuid,omitempty"`
+	OwnerID string `gorm:"not null" json:"owner_id"`
 	Name string `gorm:"type:text;uniqueIndex" json:"name"`
 	Notice string `gorm:"type:text" json:"notice,omitempty"`
 	CreatedAt time.Time `gorm:"type:timestamp with time zone;not null" json:"created_at"`

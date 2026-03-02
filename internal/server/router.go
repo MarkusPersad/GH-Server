@@ -90,6 +90,7 @@ func (server *FiberServer) RegisterRoutes() {
 
 	groupRoute := server.App.Group("/group")
 	groupRoute.Get("/list",handler.GetGroups)
+	groupRoute.Post("/create",handler.CreateGroup)
 }
 
 func (server *FiberServer) healthHandler(ctx fiber.Ctx) error {
