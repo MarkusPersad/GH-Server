@@ -28,7 +28,7 @@ func(s *service)AddFriend(request *request.AddFriendRequest,ctx fiber.Ctx) error
 		zaplog.Zap.Error(fmt.Sprintf("Get accountID failed: %v", err))
 		return err
 	}
-	if err := CheckLogin(ctx, accountID); err != nil {
+	if err := CheckLogin(ctx, accountID,true); err != nil {
 		return  err
 	}
 	return s.gdb.Transaction(func(tx *gorm.DB) error {
@@ -69,7 +69,7 @@ func(s *service)AgreeFriend(request *request.AddFriendRequest,ctx fiber.Ctx) err
 		zaplog.Zap.Error(fmt.Sprintf("Get accountID failed: %v", err))
 		return err
 	}
-	if err := CheckLogin(ctx, accountID); err != nil {
+	if err := CheckLogin(ctx, accountID,true); err != nil {
 		return  err
 	}
 	return s.gdb.Transaction(func(tx *gorm.DB) error {
@@ -98,7 +98,7 @@ func(s *service)LockFriend(request *request.AddFriendRequest,ctx fiber.Ctx) erro
 		zaplog.Zap.Error(fmt.Sprintf("Get accountID failed: %v", err))
 		return err
 	}
-	if err := CheckLogin(ctx, accountID); err != nil {
+	if err := CheckLogin(ctx, accountID,true); err != nil {
 		return  err
 	}
 	return s.gdb.Transaction(func(tx *gorm.DB) error {
@@ -130,7 +130,7 @@ func(s *service)UnlockFriend(request *request.AddFriendRequest,ctx fiber.Ctx) er
 		zaplog.Zap.Error(fmt.Sprintf("Get accountID failed: %v", err))
 		return err
 	}
-	if err := CheckLogin(ctx, accountID); err != nil {
+	if err := CheckLogin(ctx, accountID,true); err != nil {
 		return  err
 	}
 	return s.gdb.Transaction(func(tx *gorm.DB) error {

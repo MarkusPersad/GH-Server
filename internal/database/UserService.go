@@ -128,7 +128,7 @@ func(s *service) Login(login *request.UserLoginRequest,ctx fiber.Ctx) (*response
 		if user.Status == 1  {
 			return exceptions.ErrAccountLogined
 		}
-		if err := CheckLogin(ctx,user.UUID); err != nil {
+		if err := CheckLogin(ctx,user.UUID,false); err != nil {
 			return err
 		}
 		if err := utils.ComparedWithPassword(user.Password,login.Password);err != nil {
@@ -171,15 +171,16 @@ func(s *service) Login(login *request.UserLoginRequest,ctx fiber.Ctx) (*response
 // 返回值:
 //   error: 操作失败时返回错误，成功时返回nil
 func(s *service) Logout(ctx fiber.Ctx) error{
-	return s.gdb.Transaction(func(tx *gorm.DB) error {
-		accountID,err := jwtware.FromContext(ctx).Claims.GetSubject()
+	accountID,err := jwtware.FromContext(ctx).Claims.GetSubject()
 		if err != nil {
 			zaplog.Zap.Error(fmt.Sprintf("Get accountID failed: %v", err))
 			return err
 		}
-		if err := CheckLogin(ctx,accountID); err != nil {
-			return nil
+		if err := CheckLogin(ctx,accountID,true); err != nil {
+			zaplog.Zap.Error(fmt.Sprintf("CheckLogin failed: %v", err))
+			return err
 		}
+	return s.gdb.Transaction(func(tx *gorm.DB) error {
 		if _,err := gorm.G[model.User](tx).Where("uuid = ? ",accountID).Select("status","last_logout_at","version").Updates(ctx,model.User{
 			LastLogoutAt: time.Now(),
 			Status: 0,
@@ -220,7 +221,7 @@ func (s *service) GetUserDetails(ctx fiber.Ctx,searchinfo string) (*response.Use
 		zaplog.Zap.Error(fmt.Sprintf("Get accountID failed: %v", err))
 		return nil,err
 	}
-	if err := CheckLogin(ctx,accountID); err != nil {
+	if err := CheckLogin(ctx,accountID,true); err != nil {
 			return nil,err
 		}
 	userInfo := new(response.UserInfoResponse)
@@ -256,7 +257,7 @@ func (s *service) Search(ctx fiber.Ctx, searchinfo string) (*response.SearchResp
 		zaplog.Zap.Error(fmt.Sprintf("Get accountID failed: %v", err))
 		return nil, err
 	}
-	if err := CheckLogin(ctx, accountID); err != nil {
+	if err := CheckLogin(ctx, accountID,true); err != nil {
 		return nil, err
 	}
 
@@ -327,7 +328,7 @@ func (s *service) GetUserList(ctx fiber.Ctx) (*[]model.User, error) {
 	}
 
 	// 检查账户是否已登录
-	if err := CheckLogin(ctx, accountID); err != nil {
+	if err := CheckLogin(ctx, accountID,true); err != nil {
 		return nil, err
 	}
 
@@ -348,7 +349,7 @@ func (s *service) GetUserList(ctx fiber.Ctx) (*[]model.User, error) {
 	return userList, err
 }
 
-func CheckLogin(ctx fiber.Ctx,uuid string) error {
+func CheckLogin(ctx fiber.Ctx,uuid string,ignore bool) error {
 	var err error = nil
 	databaseInstance,ok := ctx.App().State().MustGet(STATENAME).(Service)
 	if !ok {
@@ -368,8 +369,11 @@ func CheckLogin(ctx fiber.Ctx,uuid string) error {
 		zaplog.Zap.Error(fmt.Sprintf("Redis Exists Error:%v",err))
 		err = exceptions.ErrInternalServerError
 	}
-	if cmdInt != 0 {
-		err = exceptions.ErrAccountLogined
+	if !ignore {
+		if cmdInt != 0 {
+			err = exceptions.ErrAccountLogined
+		}
 	}
+	
 	return err
 }

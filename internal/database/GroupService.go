@@ -26,7 +26,7 @@ func(s *service)GetGroups(ctx fiber.Ctx) (*[]model.Group, error){
 		zaplog.Zap.Error(fmt.Sprintf("Get accountID failed: %v", err))
 		return nil,err
 	}
-	if err := CheckLogin(ctx, accountID); err != nil {
+	if err := CheckLogin(ctx, accountID,true); err != nil {
 		return  nil,err
 	}
 	groups := new([]model.Group)
@@ -53,7 +53,7 @@ func(s *service)CreateGroup(request *request.GroupCreateRequest,ctx fiber.Ctx) e
 		zaplog.Zap.Error(fmt.Sprintf("Get accountID failed: %v", err))
 		return err
 	}
-	if err := CheckLogin(ctx, accountID); err != nil {
+	if err := CheckLogin(ctx, accountID,true); err != nil {
 		return  err
 	}
 	return s.gdb.Transaction(func(tx *gorm.DB) error {
@@ -109,7 +109,7 @@ func (s *service) GetGroupDetails(ctx fiber.Ctx, searchInfo string) (*model.Grou
 	}
 
 	// Validate the login status of the user.
-	if err := CheckLogin(ctx, accountID); err != nil {
+	if err := CheckLogin(ctx, accountID,true); err != nil {
 		return nil, err
 	}
 

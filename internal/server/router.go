@@ -4,16 +4,19 @@ import (
 	"GH-Server/internal/database"
 	"GH-Server/internal/handler"
 	"GH-Server/internal/middleware"
+	"GH-Server/internal/proxy"
 	"GH-Server/pkg/utils"
 	"GH-Server/pkg/zaplog"
 	"os"
 	"strings"
+	"time"
 
 	jwtware "github.com/gofiber/contrib/v3/jwt"
 	"github.com/gofiber/contrib/v3/monitor"
 	middlewareZap "github.com/gofiber/contrib/v3/zap"
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/extractors"
+	"github.com/gofiber/fiber/v3/middleware/cache"
 	"github.com/gofiber/fiber/v3/middleware/cors"
 	"github.com/gofiber/fiber/v3/middleware/recover"
 	"go.uber.org/zap/zapcore"
@@ -92,6 +95,15 @@ func (server *FiberServer) RegisterRoutes() {
 	groupRoute.Get("/list",handler.GetGroups)
 	groupRoute.Post("/create",handler.CreateGroup)
 	groupRoute.Get("/details/:searchinfo",handler.GetGroupDetails)
+
+	proxyRoute := server.App.Group("/proxy")
+	proxyRoute.Use(cache.New(cache.Config{
+		Expiration: 1*time.Minute,
+		
+	}))
+	proxyRoute.Get("/imagery/:s/:z/:x/:y",proxy.ImageryHandler)
+	proxyRoute.Get("/ibo/:s/:z/:x/:y",proxy.IboHandler)
+	proxyRoute.Get("/cia/:s/:z/:x/:y",proxy.CiaHandler)
 }
 
 func (server *FiberServer) healthHandler(ctx fiber.Ctx) error {
