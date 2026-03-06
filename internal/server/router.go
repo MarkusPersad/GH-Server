@@ -9,7 +9,6 @@ import (
 	"GH-Server/pkg/zaplog"
 	"os"
 	"strings"
-	"time"
 
 	jwtware "github.com/gofiber/contrib/v3/jwt"
 	"github.com/gofiber/contrib/v3/monitor"
@@ -60,6 +59,7 @@ func (server *FiberServer) RegisterRoutes() {
 				strings.Contains(ctx.Path(),"/login") ||
 				strings.Contains(ctx.Path(),"/sendVerifyCode") ||
 				strings.Contains(ctx.Path(),"/uploadAvatar") ||
+				strings.Contains(ctx.Path(),"/proxy") ||
 				strings.Contains(ctx.Path(),"/refresh")
 		},
 	}))
@@ -97,13 +97,11 @@ func (server *FiberServer) RegisterRoutes() {
 	groupRoute.Get("/details/:searchinfo",handler.GetGroupDetails)
 
 	proxyRoute := server.App.Group("/proxy")
-	proxyRoute.Use(cache.New(cache.Config{
-		Expiration: 1*time.Minute,
-		
-	}))
-	proxyRoute.Get("/imagery/:s/:z/:x/:y",proxy.ImageryHandler)
-	proxyRoute.Get("/ibo/:s/:z/:x/:y",proxy.IboHandler)
-	proxyRoute.Get("/cia/:s/:z/:x/:y",proxy.CiaHandler)
+	proxyRoute.Use(cache.New(cache.ConfigDefault))
+	// proxyRoute.Get("/imagery/:s/:z/:x/:y",proxy.ImageryHandler)
+	// proxyRoute.Get("/ibo/:s/:z/:x/:y",proxy.IboHandler)
+	// proxyRoute.Get("/cia/:s/:z/:x/:y",proxy.CiaHandler)
+	proxyRoute.Use(proxy.ImageryMiddleware())
 }
 
 func (server *FiberServer) healthHandler(ctx fiber.Ctx) error {
