@@ -1,6 +1,9 @@
 package proxy
 
 import (
+	"GH-Server/pkg/exceptions"
+	"GH-Server/pkg/request"
+	"GH-Server/pkg/utils"
 	"GH-Server/pkg/zaplog"
 	"crypto/tls"
 	"fmt"
@@ -13,6 +16,7 @@ import (
 
 var (
 	tDToken = os.Getenv("TIANDITU_KEY")
+	tDServerToken = os.Getenv("TIANDITU_TOKEN")
 )
 
 func init() {
@@ -33,5 +37,22 @@ func ImageryHandler(ctx fiber.Ctx) error {
 		zaplog.Zap.Error(fmt.Sprintf("Proxy failed: %v", err))
 		return err
 	} 
+	return nil
+}
+
+func GeoCoderHandler(ctx fiber.Ctx) error {
+	request := new(request.GeoCoderRequest)
+	if err := ctx.Bind().Body(request);err != nil {
+		return exceptions.ErrBadRequest
+	}
+	if err := ctx.App().State().MustGet(utils.ValidatorSTATENAME).(*utils.StructValidator).Validate(request); err != nil {
+		return exceptions.ErrInvalidParameters
+	}
+	url := fmt.Sprintf(`http://api.tianditu.gov.cn/geocoder?ds={"keyWord":"%s"}&tk=%s`,request.KeyWord,tDServerToken)
+	zaplog.Zap.Info(fmt.Sprintf("Request URL: %s", url))
+	if err := proxy.Do(ctx,url);err != nil {
+		zaplog.Zap.Error(fmt.Sprintf("Proxy failed: %v", err))
+		return err
+	}
 	return nil
 }

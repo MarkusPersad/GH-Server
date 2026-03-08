@@ -59,7 +59,6 @@ func (server *FiberServer) RegisterRoutes() {
 				strings.Contains(ctx.Path(),"/login") ||
 				strings.Contains(ctx.Path(),"/sendVerifyCode") ||
 				strings.Contains(ctx.Path(),"/uploadAvatar") ||
-				// strings.Contains(ctx.Path(),"/proxy") ||
 				strings.Contains(ctx.Path(),"/refresh")
 		},
 	}))
@@ -99,6 +98,7 @@ func (server *FiberServer) RegisterRoutes() {
 	proxyRoute := server.App.Group("/proxy")
 	proxyRoute.Use(cache.New(cache.ConfigDefault))
 	proxyRoute.Get("/imagery/:s/:T/:z/:x/:y",proxy.ImageryHandler)
+	proxyRoute.Post("/geocoder",proxy.GeoCoderHandler)
 }
 
 func (server *FiberServer) healthHandler(ctx fiber.Ctx) error {
