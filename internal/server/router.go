@@ -59,6 +59,7 @@ func (server *FiberServer) RegisterRoutes() {
 				strings.Contains(ctx.Path(),"/login") ||
 				strings.Contains(ctx.Path(),"/sendVerifyCode") ||
 				strings.Contains(ctx.Path(),"/uploadAvatar") ||
+				strings.Contains(ctx.Path(),"/imagery") ||
 				strings.Contains(ctx.Path(),"/refresh")
 		},
 	}))
