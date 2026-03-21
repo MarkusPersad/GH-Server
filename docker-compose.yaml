@@ -34,14 +34,14 @@ services:
       - $HOME/data/logs/rustfs:/app/logs
 
   postgres:
-    image: postgres:latest
+    image: kartoza/postgis
     container_name: postgres
     volumes:
       - $HOME/data/postgres:/var/lib/postgresql
     ports:
       - "5432:5432"
     environment:
-      - POSTGRES_DB=postgres
+      - POSTGRES_DB=postgres,postgis
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=123456
       - ALLOW_IP_RANGE=0.0.0.0/0
@@ -84,3 +84,48 @@ services:
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
     volumes:
       - $HOME/data/kafka:/tmp/kraft-combined-logs 
+  
+  geoserver:
+    image: kartoza/geoserver
+    container_name: geoserver
+    environment:
+      - SAMPLE_DATA=true
+      - GEOSERVER_DATA_DIR=/opt/geoserver/data_dir
+      - FOOTPRINTS_DATA_DIR=/opt/footprints_dir
+      - FONTS_DIR=/opt/fonts
+      - GEOWEBCACHE_CACHE_DIR=/opt/geoserver/gwc
+      - GEOSERVER_ADMIN_PASSWORD=123456
+      - GEOSERVER_ADMIN_USER=admin
+      - INITIAL_MEMORY=2G
+      - MAXIMUM_MEMORY=4G
+      - ENCODING='UTF8'
+      - LOGIN_STATUS=on
+      - REQUEST_TIMEOUT=60
+      - PARALLEL_REQUEST=100
+      - GETMAP=10
+      - REQUEST_EXCEL=4
+      - SINGLE_USER=6
+      - GWC_REQUEST=16
+      - WPS_REQUEST=1000/d;30s
+      # PostGIS 连接
+      - POSTGRES_JNDI=TRUE               
+      - DB_BACKEND=POSTGRES               
+      - HOST=postgres                          
+      - POSTGRES_PORT=5432                
+      - POSTGRES_DB=postgis                   
+      - POSTGRES_USER=postgres  
+      - POSTGRES_PASS=123456                        
+      - POSTGRES_SCHEMA=public           
+      # 磁盘配额配置 - 使用JNDI连接
+      - DISK_QUOTA_SIZE=5
+      - DISK_QUOTA_JNDI=TRUE
+      - DISK_QUOTA_JNDI_NAME=jdbc/postgres
+    volumes:
+    - $HOME/data/geoserver/data_dir:/opt/geoserver/data_dir
+    - $HOME/data/geoserver/gwc:/opt/geoserver/gwc
+    - $HOME/data/geoserver/settings:/settings
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+    - "8081:8080"

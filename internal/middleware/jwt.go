@@ -35,8 +35,7 @@ func JwtErrorHandler(ctx fiber.Ctx,err error) error{
 		return exceptions.ErrInvalidToken
 	}
 	if errors.Is(err,jwt.ErrTokenExpired){
-		ctx.Set(accessStatus,"true")
-		return ctx.SendStatus(fiber.StatusOK)
+		return exceptions.ErrTokenExpired
 	}
 	zaplog.Zap.Error(fmt.Sprintf("Token Error:%v",err))
 	return exceptions.ErrInternalServerError
