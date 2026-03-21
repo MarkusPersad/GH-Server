@@ -22,7 +22,7 @@ func ErrorHandler(ctx fiber.Ctx, err error) error {
 	if errors.As(err, &exception) {
 		if exception.Code == exceptions.ErrTokenExpired.Code {
 			if ok,_:=strconv.ParseBool(ctx.Get(XHR));ok {
-				return ctx.SendStatus(exception.Code)
+				return ctx.SendStatus(401)
 			}
 			ctx.Set(ACCESS_STATUS,"true")
 			return ctx.SendStatus(fiber.StatusOK)	

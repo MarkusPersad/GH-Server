@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"time"
 
 	jwtware "github.com/gofiber/contrib/v3/jwt"
 	"github.com/gofiber/fiber/v3"
@@ -52,7 +53,8 @@ func JwtErrorHandler(ctx fiber.Ctx,err error) error{
 //   error: 如果出现错误则返回相应错误，正常情况下调用ctx.Next()继续执行
 func JwtSuccessHandler(ctx fiber.Ctx) error {
 	// 从JWT上下文中获取用户主题(Subject)
-	sub,err := jwtware.FromContext(ctx).Claims.GetSubject()
+	claims:= jwtware.FromContext(ctx).Claims
+	sub,err := claims.GetSubject()
 	if err != nil {
 		zaplog.Zap.Error(fmt.Sprintf("Get Subject Error:%v",err))
 		return exceptions.ErrInvalidToken
@@ -69,6 +71,19 @@ func JwtSuccessHandler(ctx fiber.Ctx) error {
 				return exceptions.ErrAccountLocked
 			}
 		}
+	}
+	expiredAt,err := claims.GetExpirationTime()
+	if err != nil {
+		zaplog.Zap.Error(fmt.Sprintf("Get Expiration Time Error:%v", err))
+		return ctx.Next() // 无过期时间，继续执行
+	}
+	if time.Until(expiredAt.Time) <= time.Minute {
+		acessToken,err := utils.CreateAccessToken(sub)
+		if err != nil {
+			zaplog.Zap.Error(fmt.Sprintf("Create Access Token Error:%v",err))
+			return exceptions.ErrInternalServerError
+		}
+		ctx.Set(accessHeader,acessToken)
 	}
 	// 用户未在黑名单中，继续执行后续中间件
 	return ctx.Next()

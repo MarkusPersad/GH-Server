@@ -33,7 +33,7 @@ func (server *FiberServer) RegisterRoutes() {
 	server.App.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"*"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
-		AllowHeaders:     []string{"Accept", "Authorization", "Content-Type"},
+		AllowHeaders:     []string{"Accept", "Authorization", "Content-Type","XHR"},
 		AllowCredentials: false, // credentials require explicit origins
 		MaxAge:           300,
 	}))
@@ -58,8 +58,6 @@ func (server *FiberServer) RegisterRoutes() {
 			return strings.Contains(ctx.Path(),"/register") ||
 				strings.Contains(ctx.Path(),"/login") ||
 				strings.Contains(ctx.Path(),"/sendVerifyCode") ||
-				strings.Contains(ctx.Path(),"/uploadAvatar") ||
-				strings.Contains(ctx.Path(),"/imagery") ||
 				strings.Contains(ctx.Path(),"/refresh")
 		},
 	}))
