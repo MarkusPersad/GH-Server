@@ -98,6 +98,7 @@ func (server *FiberServer) RegisterRoutes() {
 	proxyRoute.Use(cache.New(cache.ConfigDefault))
 	proxyRoute.Get("/imagery/:s/:T/:z/:x/:y",proxy.ImageryHandler)
 	proxyRoute.Post("/geocoder",proxy.GeoCoderHandler)
+	proxyRoute.Get("/location/:ip",proxy.IpInfoHandler)
 }
 
 func (server *FiberServer) healthHandler(ctx fiber.Ctx) error {

@@ -3,20 +3,24 @@ package proxy
 import (
 	"GH-Server/pkg/exceptions"
 	"GH-Server/pkg/request"
+	"GH-Server/pkg/response"
 	"GH-Server/pkg/utils"
 	"GH-Server/pkg/zaplog"
 	"crypto/tls"
 	"fmt"
+	"net"
 	"os"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/proxy"
+	"github.com/ipinfo/go/v2/ipinfo"
 	"github.com/valyala/fasthttp"
 )
 
 var (
 	tDToken = os.Getenv("TIANDITU_KEY")
 	tDServerToken = os.Getenv("TIANDITU_TOKEN")
+	ipinfoToken = os.Getenv("IPINFO_TOKEN")
 )
 
 func init() {
@@ -55,4 +59,18 @@ func GeoCoderHandler(ctx fiber.Ctx) error {
 		return err
 	}
 	return nil
+}
+
+func IpInfoHandler(ctx fiber.Ctx) error {
+	client := ipinfo.NewClient(nil,nil,ipinfoToken)
+	ip := ctx.Params("ip")
+	if ip == "" {
+		return exceptions.ErrBadRequest
+	}
+	info,err := client.GetIPInfo(net.ParseIP(ip))
+	if err != nil {
+		zaplog.Zap.Error(fmt.Sprintf("Get IP Info Error:%v",err.Error()))
+		return exceptions.ErrInternalServerError
+	}
+	return ctx.Status(fiber.StatusOK).JSON(response.Success("IP获取成功",info)) 
 }
