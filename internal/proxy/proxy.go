@@ -53,7 +53,6 @@ func GeoCoderHandler(ctx fiber.Ctx) error {
 		return exceptions.ErrInvalidParameters
 	}
 	url := fmt.Sprintf(`http://api.tianditu.gov.cn/geocoder?ds={"keyWord":"%s"}&tk=%s`,request.KeyWord,tDServerToken)
-	zaplog.Zap.Info(fmt.Sprintf("Request URL: %s", url))
 	if err := proxy.Do(ctx,url);err != nil {
 		zaplog.Zap.Error(fmt.Sprintf("Proxy failed: %v", err))
 		return err
@@ -73,4 +72,20 @@ func IpInfoHandler(ctx fiber.Ctx) error {
 		return exceptions.ErrInternalServerError
 	}
 	return ctx.Status(fiber.StatusOK).JSON(response.Success("IP获取成功",info)) 
+}
+
+func RoutePlanningHandler(ctx fiber.Ctx) error {
+	request := new(request.RoutePlanRequest)
+	if err := ctx.Bind().Body(request);err!= nil {
+		return exceptions.ErrBadRequest
+	}
+	if err := ctx.App().State().MustGet(utils.ValidatorSTATENAME).(*utils.StructValidator).Validate(request);err != nil {
+		return exceptions.ErrInvalidParameters
+	}
+	url := fmt.Sprintf(`http://api.tianditu.gov.cn/drive?postStr={"orig":"%s","dest":"%s","style":"%s"}&type=search&tk=%s`,request.Start,request.End,request.Mode,tDServerToken)
+	if err := proxy.Do(ctx,url);err != nil {
+		zaplog.Zap.Error(fmt.Sprintf("Proxy failed: %v", err))
+		return err
+	}
+	return nil	
 }
