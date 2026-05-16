@@ -102,23 +102,3 @@ func GetUserDetails(ctx fiber.Ctx) error {
 	}
 	return ctx.Status(http.StatusOK).JSON(response.Success("获取用户信息成功", userInfo))
 }
-
-func Search(ctx fiber.Ctx) error {
-	searchinfo := ctx.Params("searchinfo")
-	if searchinfo == "" {
-		return exceptions.ErrBadRequest
-	}
-	userInfo, err := ctx.App().State().MustGet(database.STATENAME).(database.Service).Search(ctx, searchinfo)
-	if err != nil {
-		return err
-	}
-	return ctx.Status(http.StatusOK).JSON(response.Success("搜索成功", userInfo))
-}
-
-func GetUserList(ctx fiber.Ctx) error{
-	userList, err := ctx.App().State().MustGet(database.STATENAME).(database.Service).GetUserList(ctx)
-	if err != nil {
-		return err
-	}
-	return ctx.Status(http.StatusOK).JSON(response.Success("获取用户列表成功", userList))
-}

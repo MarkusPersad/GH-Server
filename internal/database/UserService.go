@@ -42,8 +42,6 @@ type UserService interface {
 	Logout(ctx fiber.Ctx) error
 	UploadAvatar(ctx fiber.Ctx,email string,avatar string) error
 	GetUserDetails(ctx fiber.Ctx,searchinfo string) (*response.UserInfoResponse,error)
-	Search(ctx fiber.Ctx,searchinfo string) (*response.SearchResponse,error)
-	GetUserList(ctx fiber.Ctx) (*[]model.User, error)
 	
 }
 
@@ -250,104 +248,6 @@ func (s *service) GetUserDetails(ctx fiber.Ctx,searchinfo string) (*response.Use
 	return userInfo,err
 }
 
-func (s *service) Search(ctx fiber.Ctx, searchinfo string) (*response.SearchResponse, error) {
-	// 提取账户ID并验证登录状态
-	accountID, err := jwtware.FromContext(ctx).Claims.GetSubject()
-	if err != nil {
-		zaplog.Zap.Error(fmt.Sprintf("Get accountID failed: %v", err))
-		return nil, err
-	}
-	if err := CheckLogin(ctx, accountID,true); err != nil {
-		return nil, err
-	}
-
-	// 初始化结果容器
-	user := new([]model.User)
-	group := new([]model.Group)
-
-	// 构造模糊搜索模式
-	pattern := fmt.Sprintf("%%%s%%", searchinfo)
-
-	// 执行数据库事务
-	err = s.gdb.Transaction(func(tx *gorm.DB) error {
-		// 模糊搜索用户
-		users, err := gorm.G[model.User](tx).
-			Select("uuid", "avatar", "user_name", "email", "role").
-			Where("user_name LIKE ? OR email LIKE ?", pattern, pattern).
-			Find(ctx)
-		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-			zaplog.Zap.Error(fmt.Sprintf("select user failed: %v", err))
-			return err
-		}
-		if err == nil {
-			user = &users
-		}
-
-		// 模糊搜索群组
-		groups, err := gorm.G[model.Group](tx).
-			Select("name", "uuid").
-			Where("name LIKE ?", pattern).
-			Find(ctx)
-		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-			zaplog.Zap.Error(fmt.Sprintf("select group failed: %v", err))
-			return err
-		}
-		if err == nil {
-			group = &groups
-		}
-
-		return nil
-	})
-
-	// 构造响应结果
-	searchResponse := new(response.SearchResponse)
-	searchResponse.User = *user
-	searchResponse.Group = *group
-	return searchResponse, err
-}
-
-// GetUserList 获取当前账户关联的用户列表
-// 首先从上下文中的JWT令牌提取账户ID
-// 然后检查账户是否已登录
-// 如果账户未登录且错误不是ErrAccountLogined，则返回错误
-// 否则，查询数据库获取账户的好友列表
-// 函数使用事务确保查询期间的数据一致性
-//
-// 参数:
-//   - ctx: 包含请求信息和JWT令牌的Fiber上下文
-//
-// 返回值:
-//   - *[]model.User: 指向用户模型切片的指针，表示用户列表
-//   - error: 如果任何步骤失败则返回错误，否则返回nil
-func (s *service) GetUserList(ctx fiber.Ctx) (*[]model.User, error) {
-	// 从上下文中的JWT令牌提取账户ID
-	accountID, err := jwtware.FromContext(ctx).Claims.GetSubject()
-	if err != nil {
-		zaplog.Zap.Error(fmt.Sprintf("获取账户ID失败: %v", err))
-		return nil, err
-	}
-
-	// 检查账户是否已登录
-	if err := CheckLogin(ctx, accountID,true); err != nil {
-		return nil, err
-	}
-
-	// 初始化用户列表
-	userList := new([]model.User)
-
-	// 执行数据库事务以获取用户好友
-	err = s.gdb.Transaction(func(tx *gorm.DB) error {
-		
-		return tx.Table("user_friend").
-			Select("user.uuid,user.user_name,user.avatar").
-			Joins("JOIN user ON user_friend.friend_id = user.uuid").
-			Where("(user_friend.user_id = ? OR user_friend.friend_id = ?) AND status = 0",accountID,accountID).
-			Scan(userList).Error
-	})
-
-	// 返回用户列表和遇到的任何错误
-	return userList, err
-}
 
 func CheckLogin(ctx fiber.Ctx,uuid string,ignore bool) error {
 	var err error = nil

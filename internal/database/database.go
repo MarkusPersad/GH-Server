@@ -52,8 +52,6 @@ type service struct {
 type Service interface {
 	Health() map[string]string
 	UserService
-	FriendService
-	GroupService
 	GetRedisClient() *redis.Client
 }
 
@@ -93,7 +91,7 @@ func New() Service {
 	}
 	instance = &service{gdb: db, rdb: rdb}
 
-	if err := db.AutoMigrate(&model.User{},&model.Group{},&model.Message{},&model.UserFriend{},&model.GroupMember{}); err != nil {
+	if err := db.AutoMigrate(new(model.User)); err != nil {
 		zaplog.Zap.Error(fmt.Sprintf("failed to migrate database: %v", err))
 	}
 	

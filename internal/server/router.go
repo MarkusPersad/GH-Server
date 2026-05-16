@@ -81,19 +81,7 @@ func (server *FiberServer) RegisterRoutes() {
 	userRoute.Get("/logout", handler.UserLogout)
 	userRoute.Post("/uploadAvatar",handler.UserUploadAvatar)
 	userRoute.Get("/details/:searchinfo", handler.GetUserDetails)
-	userRoute.Get("/search/:searchinfo", handler.Search)
-	userRoute.Get("/list", handler.GetUserList)
-	friendRoute := server.App.Group("/friend")
-	friendRoute.Post("/add", handler.AddFriend)
-	friendRoute.Post("/agree", handler.AgreeFriend)
-	friendRoute.Post("/lock", handler.LockFriend)
-	friendRoute.Post("/unlock", handler.UnlockFriend)
-
-	groupRoute := server.App.Group("/group")
-	groupRoute.Get("/list",handler.GetGroups)
-	groupRoute.Post("/create",handler.CreateGroup)
-	groupRoute.Get("/details/:searchinfo",handler.GetGroupDetails)
-
+	
 	proxyRoute := server.App.Group("/proxy")
 	proxyRoute.Use(cache.New(cache.ConfigDefault))
 	proxyRoute.Get("/imagery/:s/:T/:z/:x/:y",proxy.ImageryHandler)
