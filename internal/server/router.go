@@ -5,8 +5,10 @@ import (
 	"GH-Server/internal/handler"
 	"GH-Server/internal/middleware"
 	"GH-Server/internal/proxy"
+	"GH-Server/pkg/exceptions"
 	"GH-Server/pkg/utils"
 	"GH-Server/pkg/zaplog"
+	"fmt"
 	"os"
 	"strings"
 
@@ -45,7 +47,16 @@ func (server *FiberServer) RegisterRoutes() {
 	}))
 
 	// Recovery
-	server.App.Use(recover.New(recover.ConfigDefault))
+	server.App.Use(recover.New(recover.Config{
+		PanicHandler: func(c fiber.Ctx, r any) error {
+			zaplog.Zap.Error(fmt.Sprintf("Server Panic:%v",r))
+			return exceptions.ErrInternalServerError
+		},
+		Next: nil,
+		StackTraceHandler: recover.ConfigDefault.StackTraceHandler,
+		EnableStackTrace: false,
+
+	}))
 	
 	//JWT
 	server.App.Use(jwtware.New(jwtware.Config{
