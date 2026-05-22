@@ -20,10 +20,10 @@ var (
 	logMaxBackups, _ = strconv.ParseInt(os.Getenv("LOG_MAX_BACKUPS"), 10, 64)
 	logMaxAge, _     = strconv.ParseInt(os.Getenv("LOG_MAX_AGE"), 10, 64)
 	logCompress, _   = strconv.ParseBool(os.Getenv("LOG_COMPRESS"))
-	Zap, _           = New()
+	Zap, _           = CustomLogger()
 )
 
-func New() (*zap.Logger, error) {
+func CustomLogger() (*zap.Logger, error) {
 	encoderConfig := zapcore.EncoderConfig{
 		TimeKey:        "Time",
 		LevelKey:       "Level",

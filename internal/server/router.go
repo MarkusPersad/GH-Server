@@ -14,13 +14,11 @@ import (
 
 	jwtware "github.com/gofiber/contrib/v3/jwt"
 	"github.com/gofiber/contrib/v3/monitor"
-	middlewareZap "github.com/gofiber/contrib/v3/zap"
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/extractors"
 	"github.com/gofiber/fiber/v3/middleware/cache"
 	"github.com/gofiber/fiber/v3/middleware/cors"
 	"github.com/gofiber/fiber/v3/middleware/recover"
-	"go.uber.org/zap/zapcore"
 )
 
 
@@ -40,11 +38,9 @@ func (server *FiberServer) RegisterRoutes() {
 		MaxAge:           300,
 	}))
 
-	// Logger
-	server.App.Use(middlewareZap.New(middlewareZap.Config{
-		Logger: zaplog.Zap,
-		Levels: []zapcore.Level{zapcore.ErrorLevel, zapcore.WarnLevel, zapcore.InfoLevel},
-	}))
+	//Logger
+
+	server.Use(zaplog.New())
 
 	// Recovery
 	server.App.Use(recover.New(recover.Config{
