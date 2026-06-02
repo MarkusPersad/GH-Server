@@ -18,6 +18,7 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 	_ "github.com/joho/godotenv/autoload"
+	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )
 
@@ -68,6 +69,9 @@ func (s *service) Register(register *request.UserRegisterRequest, ctx fiber.Ctx)
 			return exceptions.ErrInvalidVerificationCode
 		}
 	} else {
+		if errors.Is(err,redis.Nil) {
+			return exceptions.ErrVerificationCodeExpired
+		}
 		return err
 	}
 	userUUID := uuid.NewSHA1(uuid.NameSpaceX500,[]byte(register.UserName))
