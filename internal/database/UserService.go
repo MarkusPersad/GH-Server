@@ -41,7 +41,7 @@ type UserService interface {
 	SendVerifyCode(emailVerify *request.UserMailVerifyRequest, ctx fiber.Ctx) error
 	Login(login *request.UserLoginRequest,ctx fiber.Ctx) (*response.UserInfoResponse,error)
 	Logout(ctx fiber.Ctx) error
-	UploadAvatar(ctx fiber.Ctx,email string,avatar string) error
+	UploadAvatar(ctx fiber.Ctx,request *request.UserUploadAvatarRequest) error
 	GetUserDetails(ctx fiber.Ctx,searchinfo string) (*response.UserInfoResponse,error)
 	
 }
@@ -197,22 +197,24 @@ func(s *service) Logout(ctx fiber.Ctx) error{
 		return nil
 	})
 }
-func(s *service)UploadAvatar(ctx fiber.Ctx,email string,avatar string) error {
+func(s *service)UploadAvatar(ctx fiber.Ctx,request *request.UserUploadAvatarRequest) error {
+	accountID,err := jwtware.FromContext(ctx).Claims.GetSubject()
+	if err != nil {
+		zaplog.Zap.Error(fmt.Sprintf("Get accountID failed: %v", err))
+		return err
+	}
+	if err := CheckLogin(ctx,accountID,true); err != nil {
+			zaplog.Zap.Error(fmt.Sprintf("CheckLogin failed: %v", err))
+			return err
+		}
 	return s.gdb.Transaction(func(tx *gorm.DB) error {
-		if _,err := gorm.G[model.User](tx).Where("email = ? ",email).First(ctx); err != nil {
-			if errors.Is(err,gorm.ErrRecordNotFound) {
-				return exceptions.ErrUserNotFound
-			}
-			zaplog.Zap.Error(fmt.Sprintf("select user failed: %v", err))
+		if _,err := gorm.G[model.User](tx).Where("uuid = ? ",accountID).Select("avatar","version").Updates(ctx,model.User{
+			Avatar: request.Avatar,
+		});err != nil {
+			zaplog.Zap.Error(fmt.Sprintf("Update user failed: %v", err))
 			return err
 		}
-		if _,err := gorm.G[model.User](tx).Where("email = ? ",email).Select("avatar","version").Updates(ctx,model.User{
-			Avatar: avatar,
-		}); err != nil {
-			zaplog.Zap.Error(fmt.Sprintf("update user failed: %v", err))
-			return err
-		}
-		return nil
+		return  nil
 	})
 }
 

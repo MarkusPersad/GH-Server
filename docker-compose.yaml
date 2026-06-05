@@ -8,31 +8,6 @@ services:
       - "$HOME/data/redis:/data"
     command: redis-server --requirepass 123456
   
-  rustfs:
-    image: rustfs/rustfs:latest
-    container_name: rustfs
-    user: root
-    ports:
-      - "9010:9000"   # S3 API 对外端口
-      - "9011:9001"   # 控制台对外端口
-    environment:
-      RUSTFS_CONSOLE_ENABLE: true
-      # CORS 设置，控制台与 S3 API 都放开来源
-      RUSTFS_CORS_ALLOWED_ORIGINS: "*"
-      RUSTFS_CONSOLE_CORS_ALLOWED_ORIGINS: "*"
-      # 访问密钥（生产环境请修改为强密码）
-      RUSTFS_ACCESS_KEY: MarkusPersad
-      RUSTFS_SECRET_KEY: "12345678"
-      RUSTFS_REGION: cn-north-1
-      # 日志级别
-      RUSTFS_LOG_LEVEL: info
-
-    volumes:
-      # 存储数据卷
-      - $HOME/data/rustfs:/data
-      # 日志目录
-      - $HOME/data/logs/rustfs:/app/logs
-
   postgres:
     image: kartoza/postgis
     container_name: postgres
@@ -53,39 +28,7 @@ services:
       timeout: 10s
       retries: 3
       start_period: 1m
-  kafka:
-    image: apache/kafka:latest 
-    container_name: kafka
-    hostname: kafka
-    ports:
-      - "9092:9092"
-      - "9093:9093"  # Controller 端口
-    environment:
-      # KRaft 核心配置
-      KAFKA_NODE_ID: 1
-      KAFKA_PROCESS_ROLES: broker,controller
-      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
       
-      # 监听器配置
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://192.168.1.12:9092
-      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
-      
-      # Topic 初始化（v4 兼容）
-      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"  # 建议手动创建，避免配置不可控
-      
-      # 单节点副本配置
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-      
-      # 其他优化
-      KAFKA_NUM_PARTITIONS: 2
-      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
-    volumes:
-      - $HOME/data/kafka:/tmp/kraft-combined-logs 
-  
   geoserver:
     image: kartoza/geoserver
     container_name: geoserver

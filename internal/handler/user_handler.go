@@ -2,13 +2,11 @@ package handler
 
 import (
 	"GH-Server/internal/database"
-	"GH-Server/internal/fileServer"
 	"GH-Server/pkg/exceptions"
 	"GH-Server/pkg/request"
 	"GH-Server/pkg/response"
 	"GH-Server/pkg/utils"
 	"GH-Server/pkg/zaplog"
-	"bytes"
 	"fmt"
 	"net/http"
 
@@ -69,25 +67,17 @@ func  UserLogout(ctx fiber.Ctx) error {
 }
 
 func  UserUploadAvatar(ctx fiber.Ctx) error {
-	emailHeader, exists := ctx.GetHeaders()["Email"]
-	if !exists || len(emailHeader) == 0 {
-		zaplog.Zap.Error(fmt.Sprintf("email not found:%v", ctx.GetHeaders()))
+	request := new(request.UserUploadAvatarRequest)
+	if err := ctx.Bind().Body(request);err != nil {
+		zaplog.Zap.Error(fmt.Sprintf("bind body failed: %v", err))
 		return exceptions.ErrBadRequest
 	}
-	contentTypeHeader, exists := ctx.GetHeaders()["Content-Type"]
-	if !exists || len(contentTypeHeader) == 0 {
-		zaplog.Zap.Error(fmt.Sprintf("content-type not found:%v", ctx.GetHeaders()))
-		return exceptions.ErrBadRequest
+	if err := ctx.App().State().MustGet(utils.ValidatorSTATENAME).(*utils.StructValidator).Validate(request); err != nil {
+		return exceptions.ErrInvalidParameters
 	}
-	mpo, err := ctx.App().State().MustGet(fileServer.STATENAME).(fileServer.RustFSService).UploadSingleFile(ctx, fmt.Sprintf("avatar/%s", emailHeader[0]), bytes.NewReader(ctx.BodyRaw()), contentTypeHeader[0])
-	if err != nil {
-		zaplog.Zap.Error(fmt.Sprintf("upload file failed: %v", err))
+	if err := ctx.App().State().MustGet(database.STATENAME).(database.Service).UploadAvatar(ctx,request);err != nil{
 		return err
 	}
-	if err := ctx.App().State().MustGet(database.STATENAME).(database.Service).UploadAvatar(ctx, emailHeader[0], mpo.Location); err != nil {
-		return err
-	}
-
 	return ctx.Status(http.StatusOK).JSON(response.Success("上传成功", nil))
 }
 

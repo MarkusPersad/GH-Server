@@ -2,7 +2,6 @@ package server
 
 import (
 	"GH-Server/internal/database"
-	"GH-Server/internal/fileServer"
 	"GH-Server/internal/middleware"
 	"GH-Server/pkg/utils"
 	"os"
@@ -28,7 +27,6 @@ func New() *FiberServer {
 		}),
 	}
 	app.State().Set(database.STATENAME,database.New())
-	app.State().Set(fileServer.STATENAME,fileServer.New())
 	app.State().Set(utils.ValidatorSTATENAME,utils.NewValidator())
 	return app
 }
